@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VocabGraph 3D</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050810; --surface:#0d1117; --s2:#161b22; --s3:#21262d;
+  --border:#30363d; --accent:#58a6ff; --green:#3fb950;
+  --orange:#f78166; --purple:#d2a8ff; --yellow:#e3b341;
+  --text:#e6edf3; --muted:#8b949e;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);overflow:hidden;color:var(--text);}
+#graph{width:100vw;height:100vh;}
+
+/* ── TOP BAR ── */
+#topbar{
+  position:fixed;top:0;left:0;right:0;z-index:30;
+  display:flex;align-items:center;gap:10px;padding:9px 14px;
+  background:linear-gradient(180deg,rgba(5,8,16,.97) 70%,transparent 100%);
+}
+.logo3d{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent);font-weight:700;letter-spacing:3px;flex-shrink:0;}
+.badge{font-size:10px;background:rgba(88,166,255,.12);border:1px solid rgba(88,166,255,.3);
+  color:var(--accent);padding:2px 8px;border-radius:10px;font-family:'JetBrains Mono',monospace;flex-shrink:0;}
+
+/* search */
+.srch-wrap{position:relative;flex:1;max-width:300px;margin:0 6px;}
+#srchInput{width:100%;background:rgba(22,27,34,.9);border:1px solid var(--border);
+  border-radius:8px;padding:6px 30px 6px 11px;font-size:13px;color:var(--text);
+  font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;}
+#srchInput:focus{border-color:var(--accent);}
+#srchInput::placeholder{color:var(--muted);}
+.srch-icon{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none;}
+#srchDrop{position:absolute;top:calc(100% + 5px);left:0;right:0;
+  background:rgba(13,17,23,.97);border:1px solid var(--border);border-radius:9px;
+  overflow:hidden;display:none;z-index:200;backdrop-filter:blur(12px);box-shadow:0 8px 32px rgba(0,0,0,.7);}
+.sdrop-item{display:flex;align-items:center;gap:9px;padding:8px 12px;cursor:pointer;
+  font-size:13px;border-bottom:1px solid var(--s3);transition:background .12s;}
+.sdrop-item:last-child{border-bottom:none;}
+.sdrop-item:hover,.sdrop-item.sel{background:rgba(88,166,255,.1);}
+.sdrop-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.sdrop-cat{font-size:10px;color:var(--muted);margin-left:auto;text-transform:uppercase;letter-spacing:.8px;}
+.sdrop-empty{padding:10px 12px;font-size:12px;color:var(--muted);}
+
+.hspacer{flex:1;}
+.hint3d{font-size:11px;color:rgba(139,148,158,.45);flex-shrink:0;white-space:nowrap;}
+#back{flex-shrink:0;background:rgba(22,27,34,.85);border:1px solid var(--border);
+  border-radius:7px;padding:5px 13px;font-size:12px;color:var(--muted);cursor:pointer;
+  text-decoration:none;transition:color .2s,border-color .2s;}
+#back:hover{color:var(--accent);border-color:var(--accent);}
+
+/* ── CATEGORY FILTER ── */
+#filterPanel{
+  position:fixed;left:14px;top:50%;transform:translateY(-50%);z-index:20;
+  display:flex;flex-direction:column;gap:5px;
+  background:rgba(13,17,23,.88);border:1px solid var(--s3);
+  border-radius:11px;padding:11px 10px;backdrop-filter:blur(10px);
+}
+.filter-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;text-align:center;margin-bottom:2px;}
+.fcat{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;
+  cursor:pointer;font-size:12px;border:1px solid transparent;user-select:none;transition:opacity .2s,background .15s;}
+.fcat:hover{background:rgba(255,255,255,.04);}
+.fcat.off{opacity:.28;}
+.fdot{width:9px;height:9px;border-radius:50%;flex-shrink:0;box-shadow:0 0 6px currentColor;}
+.fcount{margin-left:auto;font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.fline{border:none;border-top:1px solid var(--s3);margin:4px 0;}
+
+/* ── DETAIL PANEL ── */
+#dPanel{
+  position:fixed;top:0;right:0;bottom:0;width:370px;z-index:25;
+  background:var(--surface);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+  transform:translateX(100%);transition:transform .25s ease;
+}
+#dPanel.open{transform:translateX(0);}
+
+.dh{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;
+  background:rgba(5,8,16,.6);}
+.dh-word{font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--accent);font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dh-cat{font-size:10px;padding:2px 7px;border-radius:10px;border:1px solid;font-family:'JetBrains Mono',monospace;}
+.close-x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:0 2px;}
+.close-x:hover{color:var(--text);}
+
+.weight-ctrl{display:flex;align-items:center;gap:3px;background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:2px 6px;flex-shrink:0;}
+.weight-ctrl button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:0 2px;transition:color .15s;}
+.weight-ctrl button:hover{color:var(--accent);}
+.weight-inner{display:flex;flex-direction:column;align-items:center;line-height:1;}
+.weight-val{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--accent);min-width:20px;text-align:center;}
+.weight-lbl{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+
+.dtabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.dtab{padding:7px 13px;font-size:12px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;}
+.dtab.on{color:var(--accent);border-bottom-color:var(--accent);}
+.dscroll{overflow-y:auto;flex:1;padding:16px;}
+.dscroll::-webkit-scrollbar{width:4px;}
+.dscroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+/* content blocks */
+.sec{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:14px 0 7px;display:flex;align-items:center;gap:8px;}
+.sec::after{content:'';flex:1;height:1px;background:var(--border);}
+.box{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:11px 13px;font-size:13px;line-height:1.7;}
+.box.bl-accent{border-left:3px solid var(--accent);}
+.box.bl-green{border-left:3px solid var(--green);}
+.box.bl-orange{border-left:3px solid var(--orange);}
+.box.bl-yellow{border-left:3px solid var(--yellow);}
+.ex{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;margin-bottom:6px;font-size:12px;line-height:1.65;}
+.ex-lbl{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+.hl{color:var(--accent);font-weight:600;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;cursor:pointer;transition:all .2s;}
+.chip:hover{border-color:var(--accent);color:var(--accent);}
+.speak-card{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:11px 13px;margin-bottom:7px;}
+.sc-lbl{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.sc-phrase{font-size:13px;line-height:1.6;}
+.idea{background:var(--s2);border:1px solid var(--border);border-left:3px solid var(--yellow);border-radius:6px;padding:9px 12px;margin-bottom:6px;font-size:12px;line-height:1.65;}
+.sim-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--s2);border:1px solid var(--border);border-radius:6px;margin-bottom:5px;cursor:pointer;transition:background .15s;}
+.sim-row:hover{background:rgba(88,166,255,.07);}
+.sim-word{font-size:13px;flex:1;}
+.sim-reason{font-size:10px;color:var(--muted);}
+.sim-bar-wrap{width:70px;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+.sim-bar{height:100%;border-radius:3px;}
+.sim-pct{font-size:11px;width:28px;text-align:right;}
+.loading{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;padding:10px 0;}
+.spin{width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.streaming{color:var(--text);font-size:13px;line-height:1.7;white-space:pre-wrap;}
+.img-btn{display:flex;align-items:center;gap:7px;background:var(--s2);border:1px dashed var(--border);color:var(--muted);padding:9px 14px;border-radius:8px;font-size:12px;cursor:pointer;width:100%;transition:all .2s;margin-top:2px;}
+.img-btn:hover{border-color:var(--accent);color:var(--accent);}
+.img-btn .img-icon{font-size:18px;line-height:1;}
+.concept-img{width:100%;border-radius:8px;border:1px solid var(--border);display:block;object-fit:cover;max-height:200px;}
+.img-caption{font-size:11px;color:var(--muted);text-align:center;margin-top:5px;line-height:1.5;}
+.img-wrap{margin-top:2px;margin-bottom:4px;}
+
+/* ── CONTROLS ── */
+#controls{
+  position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:20;
+  display:flex;flex-direction:column;gap:4px;
+  background:rgba(13,17,23,.88);border:1px solid var(--s3);
+  border-radius:9px;padding:10px 12px;backdrop-filter:blur(8px);
+  font-size:10px;color:var(--muted);transition:opacity .2s;
+}
+#controls.shift{right:384px;}
+.ctrl-row{display:flex;align-items:center;gap:7px;}
+.ctrl-key{background:var(--s3);border:1px solid var(--border);border-radius:4px;
+  padding:1px 6px;font-family:'JetBrains Mono',monospace;font-size:9px;color:#c9d1d9;}
+.rot-btn{background:rgba(22,27,34,.85);border:1px solid var(--border);border-radius:7px;
+  padding:5px 10px;font-size:11px;color:var(--muted);cursor:pointer;
+  transition:color .2s,border-color .2s;margin-top:6px;text-align:center;}
+.rot-btn:hover,.rot-btn.on{color:var(--accent);border-color:var(--accent);}
+
+#nodeCount{position:fixed;bottom:14px;right:14px;z-index:10;
+  font-size:10px;color:var(--s3);font-family:'JetBrains Mono',monospace;transition:right .25s;}
+#nodeCount.shift{right:384px;}
+
+/* ── MINI CARD (hover) ── */
+#miniCard{
+  position:fixed;pointer-events:none;z-index:50;
+  background:rgba(13,17,23,.96);border:1px solid var(--border);
+  border-radius:10px;padding:11px 14px;max-width:210px;min-width:150px;
+  display:none;backdrop-filter:blur(12px);box-shadow:0 6px 28px rgba(0,0,0,.7);
+  animation:mcFade .1s ease;
+}
+@keyframes mcFade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+.mc-word{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;margin-bottom:3px;}
+.mc-cat{font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;}
+.mc-meta{display:flex;gap:12px;font-size:11px;color:var(--muted);}
+.mc-def{font-size:11px;color:#c9d1d9;line-height:1.55;border-top:1px solid var(--s3);
+  padding-top:7px;margin-top:7px;}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <span class="logo3d">VOCAB·GRAPH</span>
+  <span class="badge">3D</span>
+  <div class="srch-wrap">
+    <input id="srchInput" type="text" placeholder="Search word…" autocomplete="off"
+      oninput="srchOnInput(this.value)" onkeydown="srchOnKey(event)">
+    <span class="srch-icon">⌕</span>
+    <div id="srchDrop"></div>
+  </div>
+  <span class="hspacer"></span>
+  <span class="hint3d">drag · orbit · scroll zoom · click node</span>
+  <a href="/" id="back">← 2D</a>
+</div>
+
+<!-- CATEGORY FILTERS -->
+<div id="filterPanel">
+  <div class="filter-lbl">Filter</div>
+  <div class="fcat" id="f-concept"  onclick="toggleCat('concept')">
+    <div class="fdot" style="color:#58a6ff;background:#58a6ff"></div>Concept
+    <span class="fcount" id="fc-concept">0</span>
+  </div>
+  <div class="fcat" id="f-phrase"   onclick="toggleCat('phrase')">
+    <div class="fdot" style="color:#3fb950;background:#3fb950"></div>Phrase
+    <span class="fcount" id="fc-phrase">0</span>
+  </div>
+  <div class="fcat" id="f-temporal" onclick="toggleCat('temporal')">
+    <div class="fdot" style="color:#f78166;background:#f78166"></div>Temporal
+    <span class="fcount" id="fc-temporal">0</span>
+  </div>
+  <div class="fcat" id="f-jargon"   onclick="toggleCat('jargon')">
+    <div class="fdot" style="color:#d2a8ff;background:#d2a8ff"></div>Jargon
+    <span class="fcount" id="fc-jargon">0</span>
+  </div>
+  <hr class="fline">
+  <div style="font-size:10px;color:var(--muted);text-align:center;">bigger = more weight</div>
+</div>
+
+<!-- 3D GRAPH -->
+<div id="graph"></div>
+
+<!-- DETAIL PANEL -->
+<div id="dPanel">
+  <div class="dh">
+    <span class="dh-word" id="dhWord">—</span>
+    <span class="dh-cat"  id="dhCat"></span>
+    <div class="weight-ctrl" id="weightCtrl" style="display:none">
+      <button onclick="adjustWeight(-1)">−</button>
+      <div class="weight-inner">
+        <span class="weight-val" id="weightVal">1</span>
+        <span class="weight-lbl">weight</span>
+      </div>
+      <button onclick="adjustWeight(+1)">+</button>
+    </div>
+    <button class="close-x" onclick="closeDetail()">×</button>
+  </div>
+  <div class="dtabs" id="dtabs">
+    <div class="dtab on"  data-tab="learn"   onclick="switchTab(this)">📖 Learn</div>
+    <div class="dtab"     data-tab="speak"   onclick="switchTab(this)">🗣 Speak</div>
+    <div class="dtab"     data-tab="ideas"   onclick="switchTab(this)">💡 Ideas</div>
+    <div class="dtab"     data-tab="similar" onclick="switchTab(this)">🔗 Similar</div>
+  </div>
+  <div class="dscroll" id="dScroll"></div>
+</div>
+
+<!-- CONTROLS -->
+<div id="miniCard"></div>
+
+<div id="controls">
+  <div class="ctrl-row"><span class="ctrl-key">drag</span> orbit</div>
+  <div class="ctrl-row"><span class="ctrl-key">scroll</span> zoom</div>
+  <div class="ctrl-row"><span class="ctrl-key">click</span> inspect</div>
+  <div class="rot-btn on" id="rotBtn" onclick="toggleRotate()">⟳ Auto-rotate</div>
+</div>
+<div id="nodeCount"></div>
+
+<script src="https://unpkg.com/three@0.157.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three-spritetext@1.9.0/dist/three-spritetext.min.js"></script>
+<script src="https://unpkg.com/3d-force-graph@1.73.4/dist/3d-force-graph.min.js"></script>
+<script>
+const API = window.location.origin;
+
+const catColor = { concept:'#58a6ff', phrase:'#3fb950', temporal:'#f78166', jargon:'#d2a8ff' };
+const catStyleMap = {
+  concept:  {color:'var(--accent)',  border:'1px solid var(--accent)'},
+  phrase:   {color:'var(--green)',   border:'1px solid var(--green)'},
+  temporal: {color:'var(--orange)',  border:'1px solid var(--orange)'},
+  jargon:   {color:'var(--purple)',  border:'1px solid var(--purple)'},
+};
+const clusterPos = {
+  concept:  [-55,  30,  20],
+  phrase:   [ 55,  30, -20],
+  temporal: [ 25, -45,  50],
+  jargon:   [-25, -45, -50],
+};
+
+let Graph, autoRotate = true;
+let gData = { nodes:[], links:[] };
+let activeCats = new Set(['concept','phrase','temporal','jargon']);
+let selectedId = null, activeTab = 'learn';
+let aiCache = {}, simCache = {}, imageCache = {};
+
+// ── API HELPERS ──────────────────────────────────────
+async function apiPost(url, body){
+  const r = await fetch(`${API}${url}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  return r.json();
+}
+
+// ── LOAD ─────────────────────────────────────────────
+async function loadData() {
+  const [rawNodes, rawLinks] = await Promise.all([
+    fetch(`${API}/api/nodes`).then(r=>r.json()),
+    fetch(`${API}/api/links`).then(r=>r.json()),
+  ]);
+  gData = {
+    nodes: rawNodes.map(n=>({...n})),
+    links: rawLinks.map(l=>({source:l.source, target:l.target, score:l.score||0.5, reason:l.reason||''})),
+  };
+  updateCounts();
+  document.getElementById('nodeCount').textContent = `${gData.nodes.length} nodes · ${gData.links.length} links`;
+}
+
+async function reloadData() {
+  await loadData();
+  Graph.graphData(gData);
+}
+
+// ── INIT GRAPH ───────────────────────────────────────
+async function init() {
+  await loadData();
+
+  Graph = ForceGraph3D({ antialias:true })
+    (document.getElementById('graph'))
+    .backgroundColor('#050810')
+    .graphData(gData)
+    .nodeId('id')
+    .nodeVisibility(n => activeCats.has(n.cat))
+    .linkVisibility(l => {
+      const s=l.source.id||l.source, t=l.target.id||l.target;
+      const sn=gData.nodes.find(n=>n.id===s), tn=gData.nodes.find(n=>n.id===t);
+      return !!(sn && tn && activeCats.has(sn.cat) && activeCats.has(tn.cat));
+    })
+    .nodeThreeObject(buildNodeObject)
+    .nodeThreeObjectExtend(false)
+    .linkSource('source').linkTarget('target')
+    .linkWidth(l => Math.max(0.4,(l.score||0.4)*1.4))
+    .linkColor(l => (l.score||0)>=.75 ? 'rgba(63,185,80,0.55)' : 'rgba(88,166,255,0.18)')
+    .linkOpacity(1)
+    .linkDirectionalParticles(l => l.score>=.72 ? 3 : 0)
+    .linkDirectionalParticleWidth(1.8)
+    .linkDirectionalParticleColor(()=>'#58a6ff')
+    .linkDirectionalParticleSpeed(0.005)
+    .onNodeClick(node => { selectedId=node.id; flyTo(node); showDetail(node.id, node.cat); })
+    .onNodeHover(node => node ? showMiniCard(node) : hideMiniCard())
+    .onBackgroundClick(() => { closeDetail(); srchClose(); hideMiniCard(); })
+    .d3Force('cluster', clusterForce)
+    .d3AlphaDecay(0.02)
+    .d3VelocityDecay(0.3);
+
+  const scene = Graph.scene();
+  scene.add(new THREE.AmbientLight(0x334466, 1.2));
+  const pl1 = new THREE.PointLight(0x58a6ff, 1.0, 500); pl1.position.set(0,100,50);  scene.add(pl1);
+  const pl2 = new THREE.PointLight(0xd2a8ff, 0.6, 400); pl2.position.set(-80,-60,-80); scene.add(pl2);
+  const pl3 = new THREE.PointLight(0x3fb950, 0.4, 300); pl3.position.set(80,-60,80);  scene.add(pl3);
+
+  Graph.cameraPosition({x:0,y:0,z:280});
+  Graph.controls().autoRotate = true;
+  Graph.controls().autoRotateSpeed = 0.5;
+  Graph.controls().enableDamping = true;
+
+  // pulse animation — each node breathes at a speed proportional to its weight
+  Graph.onRenderFramePost(() => {
+    const t = Date.now() / 1000;
+    gData.nodes.forEach(node => {
+      if (!node.__threeObj) return;
+      const w     = Math.max(1, node.weight || 1);
+      const speed = 0.5 + w * 0.18;          // heavier → faster
+      const amp   = 0.04 + Math.min(w * 0.007, 0.07); // heavier → slightly bigger swell
+      const scale = 1 + Math.sin(t * speed) * amp;
+      node.__threeObj.scale.setScalar(scale);
+    });
+  });
+
+  window.addEventListener('resize', ()=>Graph.width(window.innerWidth).height(window.innerHeight));
+}
+
+// ── NODE OBJECT ──────────────────────────────────────
+function buildNodeObject(node) {
+  const color = catColor[node.cat] || '#e3b341';
+  const w = Math.max(1, node.weight||1);
+  const r = Math.max(5, Math.min(22, 4+w*2.8));
+  const group = new THREE.Group();
+
+  group.add(new THREE.Mesh(new THREE.SphereGeometry(r*2.6,12,12),
+    new THREE.MeshBasicMaterial({color, transparent:true, opacity:0.04, side:THREE.BackSide})));
+  group.add(new THREE.Mesh(new THREE.SphereGeometry(r*1.7,14,14),
+    new THREE.MeshBasicMaterial({color, transparent:true, opacity:0.10, side:THREE.BackSide})));
+  group.add(new THREE.Mesh(new THREE.SphereGeometry(r,24,24),
+    new THREE.MeshPhongMaterial({color, emissive:color, emissiveIntensity:0.5, transparent:true, opacity:0.82, shininess:90})));
+
+  const label = new SpriteText(node.id);
+  label.color = 'rgba(201,209,217,0.9)';
+  label.textHeight = Math.min(5, Math.max(3, 3+w*0.2));
+  label.position.set(0, r+8, 0);
+  group.add(label);
+
+  return group;
+}
+
+// ── CLUSTER FORCE ────────────────────────────────────
+function clusterForce(alpha) {
+  gData.nodes.forEach(d => {
+    const t = clusterPos[d.cat]; if(!t) return;
+    d.vx=(d.vx||0)+(t[0]-(d.x||0))*alpha*0.06;
+    d.vy=(d.vy||0)+(t[1]-(d.y||0))*alpha*0.06;
+    d.vz=(d.vz||0)+(t[2]-(d.z||0))*alpha*0.06;
+  });
+}
+
+// ── CATEGORY FILTER ──────────────────────────────────
+function toggleCat(cat) {
+  if(activeCats.has(cat)){ if(activeCats.size===1) return; activeCats.delete(cat); }
+  else activeCats.add(cat);
+  document.getElementById(`f-${cat}`).classList.toggle('off', !activeCats.has(cat));
+  applyVisibility();
+}
+function applyVisibility(){
+  Graph.nodeVisibility(n=>activeCats.has(n.cat))
+       .linkVisibility(l=>{
+         const s=l.source.id||l.source, t=l.target.id||l.target;
+         const sn=gData.nodes.find(n=>n.id===s), tn=gData.nodes.find(n=>n.id===t);
+         return !!(sn&&tn&&activeCats.has(sn.cat)&&activeCats.has(tn.cat));
+       });
+}
+function updateCounts(){
+  ['concept','phrase','temporal','jargon'].forEach(cat=>{
+    const el=document.getElementById(`fc-${cat}`);
+    if(el) el.textContent=gData.nodes.filter(n=>n.cat===cat).length;
+  });
+}
+
+// ── FLY TO NODE ──────────────────────────────────────
+function flyTo(node){
+  if(!activeCats.has(node.cat)){
+    activeCats.add(node.cat);
+    document.getElementById(`f-${node.cat}`)?.classList.remove('off');
+    applyVisibility();
+  }
+  const nx=node.x||0, ny=node.y||0, nz=node.z||0;
+  const mag=Math.hypot(nx,ny,nz)||1;
+  const ratio=1+80/mag;
+  Graph.cameraPosition({x:nx*ratio,y:ny*ratio,z:nz*ratio},{x:nx,y:ny,z:nz},1000);
+  Graph.controls().autoRotate=false;
+  document.getElementById('rotBtn').classList.remove('on');
+  autoRotate=false;
+}
+
+// ── DETAIL PANEL ─────────────────────────────────────
+function showDetail(id, cat){
+  const panel=document.getElementById('dPanel');
+  panel.classList.add('open');
+  document.getElementById('controls').classList.add('shift');
+  document.getElementById('nodeCount').classList.add('shift');
+
+  document.getElementById('dhWord').textContent=id;
+  const cs=catStyleMap[cat]||{color:'var(--yellow)',border:'1px solid var(--yellow)'};
+  const ce=document.getElementById('dhCat'); ce.textContent=cat; ce.style.color=cs.color; ce.style.border=cs.border;
+
+  const n=gData.nodes.find(v=>v.id===id);
+  const wc=document.getElementById('weightCtrl'); wc.style.display='flex';
+  document.getElementById('weightVal').textContent=n?(n.weight||1):1;
+
+  activeTab='learn';
+  document.querySelectorAll('.dtab').forEach(t=>t.classList.toggle('on',t.dataset.tab==='learn'));
+
+  // load image from DB if not cached
+  if(cat==='concept' && !imageCache[id]){
+    fetch(`${API}/api/nodes/${encodeURIComponent(id)}/image`)
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{ if(d&&d.image_url) imageCache[id]={url:d.image_url,caption:''}; })
+      .catch(()=>{});
+  }
+
+  if(aiCache[id]){ renderTab(id,cat); return; }
+  fetch(`${API}/api/nodes/${encodeURIComponent(id)}/cache`)
+    .then(r=>r.ok?r.json():null)
+    .then(d=>{ if(d&&d.cache){ aiCache[id]=d.cache; renderTab(id,cat); } else streamDetail(id,cat); })
+    .catch(()=>streamDetail(id,cat));
+}
+
+function closeDetail(){
+  document.getElementById('dPanel').classList.remove('open');
+  document.getElementById('controls').classList.remove('shift');
+  document.getElementById('nodeCount').classList.remove('shift');
+  selectedId=null;
+}
+
+function switchTab(el){
+  activeTab=el.dataset.tab;
+  document.querySelectorAll('.dtab').forEach(t=>t.classList.toggle('on',t===el));
+  if(selectedId){ const n=gData.nodes.find(v=>v.id===selectedId); renderTab(selectedId,n?.cat||'concept'); }
+}
+
+// ── STREAM AI CARD ────────────────────────────────────
+async function streamDetail(id, cat){
+  const n=gData.nodes.find(v=>v.id===id)||{};
+  document.getElementById('dScroll').innerHTML=`<div class="loading"><div class="spin"></div>Asking qwen2.5-coder:7b…</div><div class="streaming" id="sOut"></div>`;
+  const so=document.getElementById('sOut');
+  let full='';
+  try{
+    const params=new URLSearchParams({cat, notes:n.notes||''});
+    const r=await fetch(`${API}/api/ai/stream/${encodeURIComponent(id)}?${params}`);
+    const reader=r.body.getReader(); const dec=new TextDecoder();
+    while(true){ const {done,value}=await reader.read(); if(done) break; full+=dec.decode(value); if(so) so.textContent=full; }
+    aiCache[id]=full;
+    apiPost(`/api/nodes/${encodeURIComponent(id)}/cache`,{word:id,cache:full});
+    const relM=full.match(/## RELATED WORDS\s*\n([^\n#]+)/);
+    if(relM){
+      const rels=relM[1].split(',').map(s=>s.trim()).filter(Boolean);
+      const newNodes=rels.filter(r=>!gData.nodes.find(n=>n.id===r)).map(r=>({id:r,cat:'concept'}));
+      const newLinks=rels.map(r=>({source:id,target:r,score:.5,reason:'from AI related words',link_type:'semantic'}));
+      await Promise.all([
+        ...newNodes.map(nn=>apiPost('/api/nodes',nn).catch(()=>{})),
+        apiPost('/api/links/batch',newLinks),
+      ]);
+      await reloadData();
+    }
+    renderTab(id,cat);
+  } catch(e){
+    document.getElementById('dScroll').innerHTML=`<div class="box bl-orange" style="margin-top:14px">
+      <strong>Model unreachable</strong><br><br>
+      Run: <code style="color:var(--accent)">ollama serve</code><br>
+      Pull: <code style="color:var(--accent)">ollama pull qwen2.5-coder:7b</code><br><br>
+      <small style="color:var(--muted)">${e.message}</small></div>`;
+  }
+}
+
+// ── RENDER TAB ────────────────────────────────────────
+function renderTab(id, cat){
+  const raw=aiCache[id]||'';
+  const p=parseCard(raw);
+  const el=document.getElementById('dScroll');
+  const tab=activeTab;
+
+  if(tab==='learn'){
+    let h='';
+    if(p.definition) h+=`<div class="sec">Definition</div><div class="box bl-accent">${p.definition}</div>`;
+    if(cat==='concept'){
+      const img=imageCache[id];
+      h+=`<div class="sec">Visual Memory</div>`;
+      if(img==='loading') h+=`<div class="loading"><div class="spin"></div>Generating image…</div>`;
+      else if(img&&img.url) h+=`<div class="img-wrap"><img class="concept-img" src="${img.url}" alt="${id}"><div class="img-caption">${img.caption||''}</div></div>`;
+      else if(img==='none') h+=`<div class="box" style="color:var(--muted);font-size:12px">No image found for <em>${id}</em>.</div>`;
+      else h+=`<button class="img-btn" onclick="fetchConceptImage('${esc(id)}')"><span class="img-icon">🖼</span>Get image to remember this concept</button>`;
+    }
+    if(p.examples.length){ h+=`<div class="sec">Examples</div>`; p.examples.forEach(ex=>{ const s=ex.sentence.replace(/<<(.+?)>>/g,'<span class="hl">$1</span>'); h+=`<div class="ex"><div class="ex-lbl">${ex.label}</div>${s}</div>`; }); }
+    const sc=simCache[id];
+    if(sc&&sc.length){ h+=`<div class="sec">Semantic connections</div><div class="chips">`; sc.forEach(s=>{ h+=`<span class="chip" onclick="quickExplore('${esc(s.word)}','concept')">${s.word}</span>`; }); h+=`</div>`; }
+    h+=`<div style="height:16px"></div>`;
+    el.innerHTML=h||`<div class="loading"><div class="spin"></div>Generating…</div>`;
+    return;
+  }
+  if(tab==='speak'){
+    let h=`<div class="sec">How to use in conversation</div>`;
+    if(p.speak.length) p.speak.forEach((s,i)=>{ const hl=s.replace(/<<(.+?)>>/g,'<span class="hl">$1</span>'); h+=`<div class="speak-card"><div class="sc-lbl">📢 Say it — ${i+1}</div><div class="sc-phrase">${hl}</div></div>`; });
+    else h+=`<div class="box" style="color:var(--muted)">Click the node again to regenerate.</div>`;
+    el.innerHTML=h+`<div style="height:16px"></div>`; return;
+  }
+  if(tab==='ideas'){
+    let h=`<div class="sec">Ideas to remember</div>`;
+    if(p.ideas.length) p.ideas.forEach(i=>{ h+=`<div class="idea">${i}</div>`; });
+    else h+=`<div class="box" style="color:var(--muted)">No ideas generated yet.</div>`;
+    el.innerHTML=h+`<div style="height:16px"></div>`; return;
+  }
+  if(tab==='similar'){
+    const sc=simCache[id];
+    if(!sc){
+      el.innerHTML=`<div class="sec">Semantic similarity</div><div class="loading"><div class="spin"></div>Calculating with Qwen…</div>`;
+      computeSimilarity(id,cat); return;
+    }
+    renderSimTab(id,sc); return;
+  }
+}
+
+// ── PARSE AI CARD ─────────────────────────────────────
+function parseCard(raw){
+  const out={definition:'',examples:[],speak:[],ideas:[]};
+  if(!raw) return out;
+  const defM=raw.match(/## DEFINITION\s*\n([\s\S]*?)(?=##|$)/); if(defM) out.definition=defM[1].trim().replace(/\n/g,'<br>');
+  const exM=raw.match(/## EXAMPLES\s*\n([\s\S]*?)(?=##|$)/);
+  if(exM) exM[1].trim().split('\n').filter(l=>l.trim()).forEach(line=>{ const m=line.match(/^\[(.+?)\]:\s*(.+)/); if(m) out.examples.push({label:m[1],sentence:m[2]}); });
+  const spM=raw.match(/## HOW TO SPEAK\s*\n([\s\S]*?)(?=##|$)/);
+  if(spM) spM[1].trim().split('\n').filter(l=>l.trim()).forEach(l=>{ const c=l.replace(/^▸\s*/,'').trim(); if(c) out.speak.push(c); });
+  const idM=raw.match(/## IDEAS TO REMEMBER\s*\n([\s\S]*?)(?=##|$)/);
+  if(idM) idM[1].trim().split('\n').filter(l=>l.trim()).forEach(l=>{ if(l.trim()) out.ideas.push(l.trim()); });
+  return out;
+}
+
+// ── SIMILARITY ────────────────────────────────────────
+async function computeSimilarity(id, cat){
+  const existing=gData.nodes.filter(n=>n.id!==id).map(n=>n.id);
+  try{
+    const d=await apiPost('/api/ai/similarity',{word:id,cat,existing});
+    simCache[id]=d.results||[];
+    const strong=d.results.filter(r=>r.score>=.5);
+    if(strong.length) await apiPost('/api/links/batch',strong.map(r=>({source:id,target:r.word,score:r.score,reason:r.reason,link_type:'semantic'})));
+    fetch(`${API}/api/sim/${encodeURIComponent(id)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({results:d.results})});
+    await reloadData();
+    renderSimTab(id,simCache[id]);
+  } catch(e){
+    document.getElementById('dScroll').innerHTML=`<div class="box bl-orange">Similarity error: ${e.message}</div>`;
+  }
+}
+
+function renderSimTab(id, sims){
+  const el=document.getElementById('dScroll');
+  let h=`<div class="sec">Semantic similarity</div>`;
+  if(!sims||!sims.length){ h+=`<div class="box" style="color:var(--muted)">No similar nodes found.</div>`; el.innerHTML=h; return; }
+  [...sims].sort((a,b)=>b.score-a.score).forEach(s=>{
+    const pct=Math.round(s.score*100);
+    const col=s.score>=.75?'var(--green)':s.score>=.6?'var(--accent)':'var(--muted)';
+    h+=`<div class="sim-row" onclick="quickExplore('${esc(s.word)}','concept')">
+      <div style="flex:1"><div class="sim-word">${s.word}</div><div class="sim-reason">${s.reason}</div></div>
+      <div class="sim-bar-wrap"><div class="sim-bar" style="width:${pct}%;background:${col}"></div></div>
+      <div class="sim-pct" style="color:${col}">${pct}%</div>
+    </div>`;
+  });
+  h+=`<div style="font-size:11px;color:var(--muted);margin-top:8px">Scored by qwen2.5-coder:7b · click any row to explore</div><div style="height:16px"></div>`;
+  el.innerHTML=h;
+}
+
+// ── IMAGE ─────────────────────────────────────────────
+async function fetchConceptImage(id){
+  imageCache[id]='loading';
+  renderTab(id,'concept');
+  try{
+    const vr=await fetch(`${API}/api/ai/visual-prompt/${encodeURIComponent(id)}`);
+    const vd=await vr.json();
+    const visualPrompt=(vd.prompt||id).trim();
+    const encoded=encodeURIComponent(`${visualPrompt}, clean digital illustration, minimal, flat design`);
+    const imgUrl=`https://image.pollinations.ai/prompt/${encoded}?width=400&height=280&nologo=true`;
+    imageCache[id]={url:imgUrl,caption:visualPrompt};
+    await apiPost(`/api/nodes/${encodeURIComponent(id)}/image`,{url:imgUrl});
+  } catch(e){ imageCache[id]='none'; }
+  renderTab(id,'concept');
+}
+
+// ── QUICK EXPLORE ─────────────────────────────────────
+function quickExplore(id, cat='concept'){
+  const node=gData.nodes.find(n=>n.id===id);
+  if(!node){
+    apiPost('/api/nodes',{id,cat,notes:''})
+      .catch(()=>{})
+      .then(()=>reloadData())
+      .then(()=>{ const nn=gData.nodes.find(n=>n.id===id); if(nn){ selectedId=id; flyTo(nn); showDetail(id,cat); } });
+    return;
+  }
+  selectedId=id; flyTo(node); showDetail(id,cat);
+}
+
+// ── WEIGHT ────────────────────────────────────────────
+async function adjustWeight(delta){
+  if(!selectedId) return;
+  const n=gData.nodes.find(v=>v.id===selectedId); if(!n) return;
+  const newW=Math.max(1,(n.weight||1)+delta);
+  const res=await apiPost(`/api/nodes/${encodeURIComponent(selectedId)}/weight`,{weight:newW});
+  n.weight=res.weight;
+  document.getElementById('weightVal').textContent=res.weight;
+  Graph.refresh();
+}
+
+// ── SEARCH ────────────────────────────────────────────
+let srchResults=[], srchIdx=-1;
+
+function srchOnInput(val){
+  srchIdx=-1;
+  const drop=document.getElementById('srchDrop');
+  if(!val.trim()){ drop.style.display='none'; srchResults=[]; return; }
+  const q=val.toLowerCase();
+  srchResults=gData.nodes.filter(n=>n.id.toLowerCase().includes(q)).slice(0,8);
+  if(!srchResults.length){
+    drop.style.display='block';
+    drop.innerHTML=`<div class="sdrop-empty">No match for "${val}"</div>`;
+    return;
+  }
+  drop.style.display='block';
+  drop.innerHTML=srchResults.map((n,i)=>`
+    <div class="sdrop-item" id="sdrop-${i}" onmousedown="srchPick(${i})">
+      <div class="sdrop-dot" style="background:${catColor[n.cat]||'#e3b341'};color:${catColor[n.cat]||'#e3b341'};box-shadow:0 0 5px currentColor"></div>
+      ${n.id}
+      <span class="sdrop-cat">${n.cat}</span>
+    </div>`).join('');
+}
+
+function srchOnKey(e){
+  if(!srchResults.length) return;
+  if(e.key==='ArrowDown'){ e.preventDefault(); srchIdx=Math.min(srchIdx+1,srchResults.length-1); srchHL(); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); srchIdx=Math.max(srchIdx-1,0); srchHL(); }
+  else if(e.key==='Enter'){ e.preventDefault(); srchPick(srchIdx>=0?srchIdx:0); }
+  else if(e.key==='Escape'){ srchClose(); document.getElementById('srchInput').blur(); }
+}
+function srchHL(){ document.querySelectorAll('.sdrop-item').forEach((el,i)=>el.classList.toggle('sel',i===srchIdx)); }
+
+function srchPick(idx){
+  const node=srchResults[idx]; if(!node) return;
+  document.getElementById('srchInput').value='';
+  srchClose();
+  selectedId=node.id; flyTo(node); showDetail(node.id, node.cat);
+  // auto-increment weight on visit
+  apiPost(`/api/nodes/${encodeURIComponent(node.id)}/weight/increment`,{}).then(res=>{
+    const n=gData.nodes.find(v=>v.id===node.id); if(n){ n.weight=res.weight; Graph.refresh(); }
+    document.getElementById('weightVal').textContent=res.weight;
+  });
+}
+function srchClose(){ document.getElementById('srchDrop').style.display='none'; srchResults=[]; srchIdx=-1; }
+document.addEventListener('click', e=>{ if(!e.target.closest('.srch-wrap')) srchClose(); });
+
+// ── ROTATE TOGGLE ─────────────────────────────────────
+function toggleRotate(){
+  autoRotate=!autoRotate;
+  Graph.controls().autoRotate=autoRotate;
+  const btn=document.getElementById('rotBtn');
+  btn.classList.toggle('on',autoRotate);
+  btn.textContent=autoRotate?'⟳ Auto-rotate':'⏸ Paused';
+}
+
+// ── MINI CARD ─────────────────────────────────────────
+let mouseX = 0, mouseY = 0;
+document.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+
+function showMiniCard(node) {
+  // don't overlap the detail panel
+  if (selectedId === node.id && document.getElementById('dPanel').classList.contains('open')) return;
+
+  const color = catColor[node.cat] || '#e3b341';
+  const linkCount = gData.links.filter(l => {
+    const s = l.source.id || l.source, t = l.target.id || l.target;
+    return s === node.id || t === node.id;
+  }).length;
+
+  // grab first sentence of definition from cache if available
+  let defSnippet = '';
+  if (aiCache[node.id]) {
+    const m = aiCache[node.id].match(/## DEFINITION\s*\n([\s\S]*?)(?=##|$)/);
+    if (m) {
+      const firstLine = m[1].trim().split('\n')[0];
+      defSnippet = firstLine.length > 90 ? firstLine.slice(0, 88) + '…' : firstLine;
+    }
+  }
+
+  const mc = document.getElementById('miniCard');
+  mc.innerHTML = `
+    <div class="mc-word" style="color:${color}">${node.id}</div>
+    <div class="mc-cat"  style="color:${color}99">${node.cat}</div>
+    <div class="mc-meta">
+      <span>⚖ ${node.weight || 1}</span>
+      <span>⇄ ${linkCount} link${linkCount!==1?'s':''}</span>
+    </div>
+    ${defSnippet ? `<div class="mc-def">${defSnippet}</div>` : ''}
+  `;
+
+  // position: offset from cursor, keep inside viewport
+  const W = window.innerWidth, H = window.innerHeight;
+  const cardW = 210, cardH = defSnippet ? 120 : 80;
+  const x = mouseX + 18 + cardW > W ? mouseX - cardW - 10 : mouseX + 18;
+  const y = mouseY + cardH > H     ? mouseY - cardH        : mouseY - 20;
+  mc.style.left    = x + 'px';
+  mc.style.top     = y + 'px';
+  mc.style.display = 'block';
+}
+
+function hideMiniCard() {
+  document.getElementById('miniCard').style.display = 'none';
+}
+
+function esc(s){ return (s||'').replace(/'/g,"\\'"); }
+
+init();
+</script>
+</body>
+</html>

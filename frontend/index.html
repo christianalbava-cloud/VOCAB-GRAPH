@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VocabGraph</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap');
+:root {
+  --bg:#0d1117; --surface:#161b22; --s2:#21262d;
+  --border:#30363d; --accent:#58a6ff; --green:#3fb950;
+  --orange:#f78166; --purple:#d2a8ff; --yellow:#e3b341;
+  --text:#e6edf3; --muted:#8b949e;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* HEADER */
+header{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;flex-wrap:wrap;}
+.logo{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent);font-weight:700;letter-spacing:2px;}
+.api-status{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--muted);}
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s;}
+.sdot.ok{background:var(--green);} .sdot.err{background:var(--orange);} .sdot.warn{background:var(--yellow);}
+.hspacer{flex:1;}
+.hbtn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.hbtn:hover,.hbtn.on{border-color:var(--accent);color:var(--accent);}
+.hbtn.primary{background:var(--accent);color:#0d1117;border-color:var(--accent);font-weight:600;}
+.hbtn.primary:hover{opacity:.85;}
+.hbtn.danger{border-color:var(--orange);color:var(--orange);}
+
+/* CLUSTER TOGGLE */
+.ctoggle{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+.twrap{position:relative;width:32px;height:17px;cursor:pointer;}
+.twrap input{opacity:0;width:0;height:0;position:absolute;}
+.ttrack{position:absolute;inset:0;background:var(--s2);border:1px solid var(--border);border-radius:9px;transition:all .2s;}
+.twrap input:checked~.ttrack{background:rgba(88,166,255,.25);border-color:var(--accent);}
+.tthumb{position:absolute;top:2px;left:2px;width:11px;height:11px;background:var(--muted);border-radius:50%;transition:all .2s;}
+.twrap input:checked~.ttrack~.tthumb{transform:translateX(15px);background:var(--accent);}
+
+/* LEGEND */
+.legend{display:flex;gap:12px;padding:5px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;align-items:center;}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);}
+.ldot{width:8px;height:8px;border-radius:50%;}
+.hint{margin-left:auto;font-size:11px;color:var(--muted);}
+
+/* LAYOUT */
+.main{flex:1;display:flex;overflow:hidden;}
+
+/* GRAPH */
+#gPanel{flex:1;position:relative;overflow:hidden;}
+svg#graph{width:100%;height:100%;}
+.link{stroke-width:1.5;stroke-linecap:round;transition:stroke-opacity .2s,stroke-width .2s;}
+.link-semantic{stroke:rgba(255,255,255,.13);}
+.link-phrase{stroke:rgba(88,166,255,.3);}
+.link-strong{stroke:rgba(63,185,80,.45);stroke-width:2.5;}
+.cluster-bubble{fill:none;stroke-width:1.2;stroke-dasharray:5,4;opacity:.15;}
+.cluster-lbl{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;opacity:.2;pointer-events:none;text-transform:uppercase;letter-spacing:2px;}
+.node circle{cursor:pointer;}
+.node text{pointer-events:none;font-family:'Inter',sans-serif;}
+.gc{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:5px;}
+.gcb{width:30px;height:30px;background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:6px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;}
+.gcb:hover{border-color:var(--accent);color:var(--accent);}
+#nodeCount{position:absolute;bottom:12px;left:14px;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+
+/* DETAIL PANEL */
+#dPanel{width:370px;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width .25s;}
+#dPanel.hidden{width:0;border:none;}
+.dh{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.dh-word{font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--accent);font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dh-cat{font-size:10px;padding:2px 7px;border-radius:10px;border:1px solid;font-family:'JetBrains Mono',monospace;}
+.close-x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:0 2px;}
+.close-x:hover{color:var(--text);}
+.dtabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.dtab{padding:7px 13px;font-size:12px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;}
+.dtab.on{color:var(--accent);border-bottom-color:var(--accent);}
+.dscroll{overflow-y:auto;flex:1;padding:16px;}
+
+/* CONTENT */
+.sec{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:14px 0 7px;display:flex;align-items:center;gap:8px;}
+.sec::after{content:'';flex:1;height:1px;background:var(--border);}
+.box{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:11px 13px;font-size:13px;line-height:1.7;}
+.box.bl-accent{border-left:3px solid var(--accent);}
+.box.bl-green{border-left:3px solid var(--green);}
+.box.bl-orange{border-left:3px solid var(--orange);}
+.box.bl-yellow{border-left:3px solid var(--yellow);}
+.ex{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;margin-bottom:6px;font-size:12px;line-height:1.65;}
+.ex-lbl{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+.hl{color:var(--accent);font-weight:600;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;cursor:pointer;transition:all .2s;}
+.chip:hover{border-color:var(--accent);color:var(--accent);}
+.speak-card{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:11px 13px;margin-bottom:7px;}
+.sc-lbl{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.sc-phrase{font-size:13px;line-height:1.6;}
+.idea{background:var(--s2);border:1px solid var(--border);border-left:3px solid var(--yellow);border-radius:6px;padding:9px 12px;margin-bottom:6px;font-size:12px;line-height:1.65;}
+
+/* SIMILARITY TAB */
+.sim-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--s2);border:1px solid var(--border);border-radius:6px;margin-bottom:5px;cursor:pointer;transition:background .15s;}
+.sim-row:hover{background:rgba(88,166,255,.07);}
+.sim-word{font-size:13px;flex:1;}
+.sim-reason{font-size:10px;color:var(--muted);}
+.sim-bar-wrap{width:70px;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+.sim-bar{height:100%;border-radius:3px;}
+.sim-pct{font-size:11px;width:28px;text-align:right;}
+
+/* LOADING */
+.loading{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;padding:10px 0;}
+.spin{width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.streaming{color:var(--text);font-size:13px;line-height:1.7;white-space:pre-wrap;}
+
+/* PHRASE BUILDER */
+#pbPanel{padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg);display:none;}
+.pb-title{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;}
+.pb-slots{display:flex;flex-wrap:wrap;gap:5px;min-height:28px;margin-bottom:7px;align-items:center;}
+.pbs{border:1px solid var(--accent);border-radius:5px;padding:3px 9px;font-size:12px;background:rgba(88,166,255,.1);}
+.pb-actions{display:flex;gap:5px;}
+.pbb{background:transparent;border:1px solid var(--border);color:var(--muted);padding:4px 9px;border-radius:5px;font-size:11px;cursor:pointer;}
+.pbb.go{border-color:var(--green);color:var(--green);}
+.pbb:hover{opacity:.8;}
+
+/* MODALS */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:center;justify-content:center;}
+.overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;width:430px;max-width:95vw;}
+.modal h3{font-size:15px;margin-bottom:14px;}
+.modal label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px;}
+.modal input,.modal select,.modal textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none;margin-bottom:11px;}
+.modal textarea{resize:vertical;min-height:55px;}
+.hint-box{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6;}
+
+/* SPELL CHECK */
+.spell-box{display:none;background:rgba(227,179,65,.07);border:1px solid rgba(227,179,65,.35);border-radius:8px;padding:11px 13px;margin-bottom:12px;animation:spellIn .18s ease;}
+@keyframes spellIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+.spell-header{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--yellow);margin-bottom:8px;}
+.spell-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+.spell-original{font-size:13px;color:var(--muted);text-decoration:line-through;}
+.spell-arrow{color:var(--muted);font-size:12px;}
+.spell-correction{font-size:14px;font-weight:600;color:var(--yellow);font-family:'JetBrains Mono',monospace;}
+.spell-btns{display:flex;gap:7px;}
+.spell-use{background:var(--yellow);color:#0d1117;border:none;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;}
+.spell-use:hover{opacity:.85;}
+.spell-keep{background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;}
+.spell-keep:hover{border-color:var(--muted);color:var(--text);}
+.spell-checking{display:none;font-size:11px;color:var(--muted);padding:4px 0;align-items:center;gap:6px;}
+.modal-actions{display:flex;gap:7px;justify-content:flex-end;margin-top:4px;}
+.m-cancel{background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 13px;border-radius:6px;font-size:12px;cursor:pointer;}
+.m-save{background:var(--accent);color:#0d1117;border:none;padding:6px 13px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;}
+
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+/* WEIGHT CONTROL */
+.weight-ctrl{display:flex;align-items:center;gap:3px;background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:2px 6px;flex-shrink:0;}
+.weight-ctrl button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:0 2px;transition:color .15s;}
+.weight-ctrl button:hover{color:var(--accent);}
+.weight-inner{display:flex;flex-direction:column;align-items:center;line-height:1;}
+.weight-val{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--accent);min-width:20px;text-align:center;}
+.weight-lbl{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+
+/* SEARCH */
+.srch-wrap{position:relative;width:210px;}
+#srchInput{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:5px 28px 5px 10px;font-size:12px;color:var(--text);font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;}
+#srchInput:focus{border-color:var(--accent);}
+#srchInput::placeholder{color:var(--muted);}
+.srch-icon{position:absolute;right:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none;}
+#srchDrop{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;display:none;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.5);}
+.srch-item{display:flex;align-items:center;gap:8px;padding:7px 11px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border);transition:background .1s;}
+.srch-item:last-child{border-bottom:none;}
+.srch-item:hover,.srch-item.sel{background:rgba(88,166,255,.08);}
+.srch-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.srch-cat{font-size:10px;color:var(--muted);margin-left:auto;text-transform:uppercase;letter-spacing:.5px;}
+.srch-empty{padding:8px 11px;font-size:12px;color:var(--muted);}
+
+/* CONCEPT IMAGE */
+.img-btn{display:flex;align-items:center;gap:7px;background:var(--s2);border:1px dashed var(--border);color:var(--muted);padding:9px 14px;border-radius:8px;font-size:12px;cursor:pointer;width:100%;transition:all .2s;margin-top:2px;}
+.img-btn:hover{border-color:var(--accent);color:var(--accent);}
+.img-btn .img-icon{font-size:18px;line-height:1;}
+.concept-img{width:100%;border-radius:8px;border:1px solid var(--border);display:block;object-fit:cover;max-height:220px;}
+.img-caption{font-size:11px;color:var(--muted);text-align:center;margin-top:5px;line-height:1.5;}
+.img-wrap{margin-top:2px;margin-bottom:4px;}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo">VOCAB·GRAPH</span>
+  <div class="api-status">
+    <span class="sdot" id="apiDot"></span>
+    <span id="apiLabel">connecting…</span>
+  </div>
+  <div class="ctoggle">
+    <label class="twrap">
+      <input type="checkbox" id="clusterToggle" checked onchange="toggleCluster()">
+      <div class="ttrack"></div>
+      <div class="tthumb"></div>
+    </label>
+    Clusters
+  </div>
+  <div class="srch-wrap">
+    <input id="srchInput" type="text" placeholder="Search word…" autocomplete="off"
+      oninput="srchOnInput(this.value)" onkeydown="srchOnKey(event)">
+    <span class="srch-icon">⌕</span>
+    <div id="srchDrop"></div>
+  </div>
+  <div class="ctoggle">    
+      Created by: Christian Oliver Alba Valdivia - Assuresoft - 2026
+  </div>
+  
+  <div class="hspacer"></div>
+  <button class="hbtn" id="phraseModeBtn" onclick="togglePhraseMode()">🔗 Phrase Mode</button>
+  <a class="hbtn" href="/graph3d.html" style="text-decoration:none">✦ 3D View</a>
+  <button class="hbtn" onclick="exportGraph()">⬇ Export</button>
+  <button class="hbtn primary" onclick="openModal()">+ Add Word</button>
+</header>
+
+<div class="legend">
+  <div class="leg"><div class="ldot" style="background:#58a6ff"></div>Concept</div>
+  <div class="leg"><div class="ldot" style="background:#3fb950"></div>Phrase</div>
+  <div class="leg"><div class="ldot" style="background:#f78166"></div>Temporal</div>
+  <div class="leg"><div class="ldot" style="background:#d2a8ff"></div>Jargon</div>
+  <span style="font-size:11px;color:var(--muted);margin-left:4px">· thick green = strong semantic link</span>
+  <span class="hint">Click node · Drag · Scroll zoom</span>
+</div>
+
+<div class="main">
+  <div id="gPanel">
+    <svg id="graph"></svg>
+    <div id="nodeCount"></div>
+    <div class="gc">
+      <button class="gcb" onclick="zI()">+</button>
+      <button class="gcb" onclick="zO()">−</button>
+      <button class="gcb" onclick="zR()">⌂</button>
+    </div>
+  </div>
+
+  <div id="dPanel" class="hidden">
+    <div class="dh">
+      <span class="dh-word" id="dhWord">—</span>
+      <span class="dh-cat" id="dhCat"></span>
+      <div class="weight-ctrl" id="weightCtrl" style="display:none">
+        <button onclick="adjustWeight(-1)" title="Decrease weight">−</button>
+        <div class="weight-inner">
+          <span class="weight-val" id="weightVal">1</span>
+          <span class="weight-lbl">weight</span>
+        </div>
+        <button onclick="adjustWeight(+1)" title="Increase weight">+</button>
+      </div>
+      <button class="close-x" onclick="closeDetail()">×</button>
+    </div>
+    <div class="dtabs" id="dtabs">
+      <div class="dtab on"  data-tab="learn"   onclick="switchTab(this)">📖 Learn</div>
+      <div class="dtab"     data-tab="speak"   onclick="switchTab(this)">🗣 Speak</div>
+      <div class="dtab"     data-tab="ideas"   onclick="switchTab(this)">💡 Ideas</div>
+      <div class="dtab"     data-tab="similar" onclick="switchTab(this)">🔗 Similar</div>
+    </div>
+    <div class="dscroll" id="dScroll"></div>
+    <div id="pbPanel">
+      <div class="pb-title">🔗 Phrase builder — click nodes</div>
+      <div class="pb-slots" id="pbSlots"><span style="font-size:11px;color:var(--muted)">Click nodes to add…</span></div>
+      <div class="pb-actions">
+        <button class="pbb" onclick="pbClear()">Clear</button>
+        <button class="pbb" onclick="pbPop()">⌫</button>
+        <button class="pbb go" onclick="pbAnalyze()">✦ Analyze</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD MODAL -->
+<div class="overlay" id="addOverlay">
+  <div class="modal">
+    <h3>Add to Vocab Graph</h3>
+    <label>Word, phrase, or concept</label>
+    <input type="text" id="newWord" placeholder="e.g. idempotent, bottleneck, 'moving forward'…">
+    <label>Category</label>
+    <select id="newCat">
+      <option value="concept">Concept — technical or abstract idea</option>
+      <option value="phrase">Phrase — set expression or idiom</option>
+      <option value="temporal">Temporal — time-related expression</option>
+      <option value="jargon">Jargon — industry-specific term</option>
+    </select>
+    <label>Your context (optional)</label>
+    <textarea id="newNotes" placeholder="Where did you encounter this? What confused you?"></textarea>
+
+    <div class="spell-checking" id="spellChecking">
+      <div class="spin"></div> Checking spelling…
+    </div>
+    <div class="spell-box" id="spellBox">
+      <div class="spell-header">✏ Spelling suggestion</div>
+      <div class="spell-row">
+        <span class="spell-original" id="spellOriginal"></span>
+        <span class="spell-arrow">→</span>
+        <span class="spell-correction" id="spellCorrection"></span>
+      </div>
+      <div class="spell-btns">
+        <button class="spell-use"  onclick="useCorrection()">Use correction</button>
+        <button class="spell-keep" onclick="keepOriginal()">Keep mine</button>
+      </div>
+    </div>
+
+    <div class="hint-box">
+      💡 Qwen will generate a <strong>definition</strong>, <strong>examples</strong>, <strong>how to speak it</strong>, and <strong>memory ideas</strong>. Semantic links to existing nodes are found automatically.
+    </div>
+    <div class="modal-actions">
+      <button class="m-cancel" onclick="closeModal()">Cancel</button>
+      <button class="m-save" onclick="saveWord()">Add to Graph</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  API CLIENT
+// ══════════════════════════════════════════════
+const API = window.location.origin; // same origin as FastAPI
+
+const catColor = {concept:'#58a6ff',phrase:'#3fb950',temporal:'#f78166',jargon:'#d2a8ff',user:'#e3b341'};
+const catStyleMap = {
+  concept:  {color:'var(--accent)', border:'1px solid var(--accent)'},
+  phrase:   {color:'var(--green)',  border:'1px solid var(--green)'},
+  temporal: {color:'var(--orange)', border:'1px solid var(--orange)'},
+  jargon:   {color:'var(--purple)', border:'1px solid var(--purple)'},
+  user:     {color:'var(--yellow)', border:'1px solid var(--yellow)'},
+};
+const clusterTargets = {
+  concept:  [.32, .36],
+  phrase:   [.68, .36],
+  temporal: [.68, .66],
+  jargon:   [.32, .66],
+};
+
+// ── health check ──
+async function checkHealth(){
+  const dot=document.getElementById('apiDot');
+  const lbl=document.getElementById('apiLabel');
+  try{
+    const r=await fetch(`${API}/api/health`);
+    const d=await r.json();
+    if(d.api==='ok' && d.ollama){
+      dot.className='sdot ok';
+      lbl.textContent=`${d.model}`;
+    } else if(d.api==='ok'){
+      dot.className='sdot warn';
+      lbl.textContent='API ok · Ollama offline';
+    }
+  } catch{
+    dot.className='sdot err';
+    lbl.textContent='API offline';
+  }
+}
+checkHealth(); setInterval(checkHealth,10000);
+
+// ── graph data ──
+let nodes=[], links=[], aiCache={}, simCache={}, imageCache={};
+
+async function loadGraph(){
+  const [ns,ls]=await Promise.all([
+    fetch(`${API}/api/nodes`).then(r=>r.json()),
+    fetch(`${API}/api/links`).then(r=>r.json()),
+  ]);
+  nodes=ns; links=ls;
+  document.getElementById('nodeCount').textContent=`${nodes.length} nodes · ${links.length} links`;
+  initGraph();
+}
+
+// ══════════════════════════════════════════════
+//  SEARCH (2D)
+// ══════════════════════════════════════════════
+let srchResults=[], srchIdx=-1;
+
+function srchOnInput(val){
+  srchIdx=-1;
+  const drop=document.getElementById('srchDrop');
+  if(!val.trim()){ drop.style.display='none'; srchResults=[]; return; }
+  const q=val.toLowerCase();
+  srchResults=nodes.filter(n=>n.id.toLowerCase().includes(q)).slice(0,8);
+  if(!srchResults.length){
+    drop.style.display='block';
+    drop.innerHTML=`<div class="srch-empty">No match for "${val}"</div>`;
+    return;
+  }
+  drop.style.display='block';
+  drop.innerHTML=srchResults.map((n,i)=>`
+    <div class="srch-item" id="srchi-${i}" onmousedown="srchPick(${i})">
+      <div class="srch-dot" style="background:${catColor[n.cat]||'#e3b341'}"></div>
+      ${n.id}
+      <span class="srch-cat">${n.cat}</span>
+    </div>`).join('');
+}
+
+function srchOnKey(e){
+  if(!srchResults.length) return;
+  if(e.key==='ArrowDown'){ e.preventDefault(); srchIdx=Math.min(srchIdx+1,srchResults.length-1); srchHL(); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); srchIdx=Math.max(srchIdx-1,0); srchHL(); }
+  else if(e.key==='Enter'){ e.preventDefault(); srchPick(srchIdx>=0?srchIdx:0); }
+  else if(e.key==='Escape'){ srchClose(); document.getElementById('srchInput').blur(); }
+}
+function srchHL(){ document.querySelectorAll('.srch-item').forEach((el,i)=>el.classList.toggle('sel',i===srchIdx)); }
+
+function srchPick(idx){
+  const node=srchResults[idx]; if(!node) return;
+  document.getElementById('srchInput').value='';
+  srchClose();
+  selectedId=node.id; hlNode(node.id); showDetail(node.id, node.cat);
+  // pan + zoom to node in the D3 simulation
+  const dn=sim&&sim.nodes().find(n=>n.id===node.id);
+  if(dn){
+    const panel=document.getElementById('gPanel');
+    const W=panel.clientWidth, H=panel.clientHeight, scale=1.8;
+    svgEl.transition().duration(700).call(
+      zoomB.transform, d3.zoomIdentity.translate(W/2-scale*dn.x, H/2-scale*dn.y).scale(scale)
+    );
+  }
+}
+function srchClose(){ document.getElementById('srchDrop').style.display='none'; srchResults=[]; srchIdx=-1; }
+document.addEventListener('click', e=>{ if(!e.target.closest('.srch-wrap')) srchClose(); });
+
+async function apiPost(url, body){
+  const r=await fetch(`${API}${url}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  return r.json();
+}
+async function apiDelete(url){
+  return fetch(`${API}${url}`,{method:'DELETE'}).then(r=>r.json());
+}
+
+// ══════════════════════════════════════════════
+//  GRAPH
+// ══════════════════════════════════════════════
+let sim, zoomB, svgEl, gEl, selectedId=null, clusterOn=true, activeTab='learn';
+
+function nodeR(id){
+  const n=nodes.find(v=>v.id===id);
+  const w=n?(n.weight||1):1;
+  return Math.max(11,Math.min(48, 8 + w*3.5));
+}
+
+function initGraph(){
+  const panel=document.getElementById('gPanel');
+  const W=panel.clientWidth, H=panel.clientHeight;
+  svgEl=d3.select('#graph'); svgEl.selectAll('*').remove();
+  const defs=svgEl.append('defs');
+  const f=defs.append('filter').attr('id','glow');
+  f.append('feGaussianBlur').attr('stdDeviation','4').attr('result','cb');
+  const mg=f.append('feMerge'); mg.append('feMergeNode').attr('in','cb'); mg.append('feMergeNode').attr('in','SourceGraphic');
+
+  gEl=svgEl.append('g');
+  zoomB=d3.zoom().scaleExtent([.1,6]).on('zoom',e=>gEl.attr('transform',e.transform));
+  svgEl.call(zoomB);
+
+  const nd=nodes.map(n=>({...n}));
+  const ld=links.map(l=>({...l}));
+
+  // cluster bubbles
+  if(clusterOn){
+    const bg=gEl.append('g');
+    Object.entries(clusterTargets).forEach(([cat,[fx,fy]])=>{
+      const count=nodes.filter(n=>n.cat===cat).length;
+      const r=Math.max(80,Math.sqrt(count+1)*58);
+      bg.append('circle').attr('class','cluster-bubble').attr('cx',W*fx).attr('cy',H*fy).attr('r',r).attr('stroke',catColor[cat]);
+      bg.append('text').attr('class','cluster-lbl').attr('x',W*fx).attr('y',H*fy-r+18).attr('text-anchor','middle').attr('fill',catColor[cat]).text(cat);
+    });
+  }
+
+  sim=d3.forceSimulation(nd)
+    .force('link',d3.forceLink(ld).id(d=>d.id).distance(d=>160-(d.score||.5)*80).strength(d=>(d.score||.4)*.8))
+    .force('charge',d3.forceManyBody().strength(-270))
+    .force('collide',d3.forceCollide(30));
+
+  if(clusterOn){
+    sim.force('cluster',alpha=>{
+      nd.forEach(d=>{
+        const t=clusterTargets[d.cat]; if(!t) return;
+        d.vx+=(W*t[0]-d.x)*alpha*.07;
+        d.vy+=(H*t[1]-d.y)*alpha*.07;
+      });
+    });
+  } else {
+    sim.force('center',d3.forceCenter(W/2,H/2));
+  }
+
+  const linkSel=gEl.append('g').selectAll('line').data(ld).join('line')
+    .attr('class',d=>{
+      if((d.score||0)>=.75) return 'link link-strong';
+      const s=typeof d.source==='object'?d.source.id:d.source;
+      const t=typeof d.target==='object'?d.target.id:d.target;
+      const sn=nodes.find(n=>n.id===s), tn=nodes.find(n=>n.id===t);
+      return 'link '+((sn&&sn.cat==='phrase')||(tn&&tn.cat==='phrase')?'link-phrase':'link-semantic');
+    });
+
+  const nodeSel=gEl.append('g').selectAll('g').data(nd).join('g').attr('class','node')
+    .call(d3.drag()
+      .on('start',(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;})
+      .on('drag', (e,d)=>{d.fx=e.x;d.fy=e.y;})
+      .on('end',  (e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}))
+    .on('click',(e,d)=>onNodeClick(d));
+
+  nodeSel.append('circle')
+    .attr('r',d=>nodeR(d.id))
+    .attr('fill',d=>catColor[d.cat]||catColor.user)
+    .attr('fill-opacity',.18)
+    .attr('stroke',d=>catColor[d.cat]||catColor.user)
+    .attr('stroke-width',1.8);
+
+  nodeSel.append('circle').attr('r',3.5)
+    .attr('fill',d=>catColor[d.cat]||catColor.user).attr('fill-opacity',.9);
+
+  nodeSel.append('text')
+    .text(d=>d.id)
+    .attr('dy',d=>nodeR(d.id)+13)
+    .attr('text-anchor','middle')
+    .attr('fill','#c9d1d9')
+    .attr('font-size',d=>d.id.length>14?9:d.id.length>9?10:11);
+
+  sim.on('tick',()=>{
+    linkSel.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    nodeSel.attr('transform',d=>`translate(${d.x},${d.y})`);
+  });
+
+  if(selectedId) setTimeout(()=>hlNode(selectedId),300);
+}
+
+function hlNode(id){
+  d3.selectAll('.node circle:first-child')
+    .attr('fill-opacity',n=>n.id===id?.65:.18)
+    .attr('stroke-width',n=>n.id===id?3:1.8)
+    .attr('filter',n=>n.id===id?'url(#glow)':null);
+  d3.selectAll('.link')
+    .attr('stroke-opacity',l=>{ const s=l.source.id||l.source,t=l.target.id||l.target; return s===id||t===id?1:.3; })
+    .attr('stroke-width',l=>{ const s=l.source.id||l.source,t=l.target.id||l.target,base=(l.score||.5)>=.75?2.5:1.5; return s===id||t===id?base+1:base; });
+}
+
+function toggleCluster(){ clusterOn=document.getElementById('clusterToggle').checked; initGraph(); if(selectedId)hlNode(selectedId); }
+function zI(){ svgEl.transition().call(zoomB.scaleBy,1.4); }
+function zO(){ svgEl.transition().call(zoomB.scaleBy,.7); }
+function zR(){ svgEl.transition().call(zoomB.transform,d3.zoomIdentity); }
+
+function onNodeClick(d){
+  if(phraseMode){ pbAdd(d.id); return; }
+  selectedId=d.id; hlNode(d.id); showDetail(d.id,d.cat);
+  // increment weight silently on every visit
+  apiPost(`/api/nodes/${encodeURIComponent(d.id)}/weight/increment`,{}).then(res=>{
+    const n=nodes.find(v=>v.id===d.id); if(n) n.weight=res.weight;
+    document.getElementById('weightVal').textContent=res.weight;
+    refreshNodeSizes();
+  });
+}
+
+// ══════════════════════════════════════════════
+//  DETAIL PANEL
+// ══════════════════════════════════════════════
+function showDetail(id,cat){
+  document.getElementById('dPanel').classList.remove('hidden');
+  document.getElementById('dhWord').textContent=id;
+  const cs=catStyleMap[cat]||catStyleMap.user;
+  const ce=document.getElementById('dhCat'); ce.textContent=cat; ce.style.color=cs.color; ce.style.border=cs.border;
+  // show weight widget
+  const n=nodes.find(v=>v.id===id);
+  const wc=document.getElementById('weightCtrl'); wc.style.display='flex';
+  document.getElementById('weightVal').textContent=n?(n.weight||1):1;
+  activeTab='learn';
+  document.querySelectorAll('.dtab').forEach(t=>t.classList.toggle('on',t.dataset.tab==='learn'));
+  // load saved image URL from DB if not already in memory cache
+  if(cat==='concept' && !imageCache[id]){
+    fetch(`${API}/api/nodes/${encodeURIComponent(id)}/image`)
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{ if(d&&d.image_url){ imageCache[id]={url:d.image_url,caption:''}; } })
+      .catch(()=>{});
+  }
+  // check AI text cache from server
+  if(aiCache[id]){ renderTab(id,cat); return; }
+  fetch(`${API}/api/nodes/${encodeURIComponent(id)}/cache`)
+    .then(r=>r.ok?r.json():null)
+    .then(d=>{ if(d&&d.cache){ aiCache[id]=d.cache; renderTab(id,cat); } else streamDetail(id,cat); })
+    .catch(()=>streamDetail(id,cat));
+}
+
+function closeDetail(){
+  document.getElementById('dPanel').classList.add('hidden');
+  d3.selectAll('.node circle:first-child').attr('fill-opacity',.18).attr('stroke-width',1.8).attr('filter',null);
+  d3.selectAll('.link').attr('stroke-opacity',.8).attr('stroke-width',l=>(l.score||.5)>=.75?2.5:1.5);
+  selectedId=null;
+}
+
+function switchTab(el){
+  activeTab=el.dataset.tab;
+  document.querySelectorAll('.dtab').forEach(t=>t.classList.toggle('on',t===el));
+  if(selectedId){ const n=nodes.find(v=>v.id===selectedId); renderTab(selectedId,n?.cat||'concept'); }
+}
+
+async function streamDetail(id,cat){
+  const n=nodes.find(v=>v.id===id)||{};
+  document.getElementById('dScroll').innerHTML=`<div class="loading"><div class="spin"></div>Asking qwen2.5-coder:7b…</div><div class="streaming" id="sOut"></div>`;
+  const so=document.getElementById('sOut');
+  let full='';
+  try{
+    const params=new URLSearchParams({cat,notes:n.notes||''});
+    const r=await fetch(`${API}/api/ai/stream/${encodeURIComponent(id)}?${params}`);
+    const reader=r.body.getReader(); const dec=new TextDecoder();
+    while(true){
+      const {done,value}=await reader.read(); if(done) break;
+      full+=dec.decode(value); if(so) so.textContent=full;
+    }
+    aiCache[id]=full;
+    // save to server cache
+    apiPost(`/api/nodes/${encodeURIComponent(id)}/cache`,{word:id,cache:full});
+    // extract related → save links
+    const relM=full.match(/## RELATED WORDS\s*\n([^\n#]+)/);
+    if(relM){
+      const rels=relM[1].split(',').map(s=>s.trim()).filter(Boolean);
+      const newNodes=rels.filter(r=>!nodes.find(n=>n.id===r)).map(r=>({id:r,cat:'concept'}));
+      const newLinks=rels.map(r=>({source:id,target:r,score:.5,reason:'from AI related words',link_type:'semantic'}));
+      await Promise.all([
+        ...newNodes.map(nn=>apiPost('/api/nodes',nn).catch(()=>{})),
+        apiPost('/api/links/batch',newLinks),
+      ]);
+    }
+    await loadGraph(); hlNode(id); renderTab(id,cat);
+  } catch(e){
+    document.getElementById('dScroll').innerHTML=`<div class="box bl-orange" style="margin-top:14px">
+      <strong>Model unreachable</strong><br><br>
+      Run: <code style="color:var(--accent)">ollama serve</code><br>
+      Pull: <code style="color:var(--accent)">ollama pull qwen2.5-coder:7b</code><br><br>
+      <small style="color:var(--muted)">${e.message}</small></div>`;
+  }
+}
+
+function renderTab(id,cat){
+  const raw=aiCache[id]||'';
+  const p=parseCard(raw);
+  const el=document.getElementById('dScroll');
+  const tab=activeTab;
+
+  if(tab==='learn'){
+    let h='';
+    if(p.definition) h+=`<div class="sec">Definition</div><div class="box bl-accent">${p.definition}</div>`;
+    if(cat==='concept'){
+      const img=imageCache[id];
+      h+=`<div class="sec">Visual Memory</div>`;
+      if(img==='loading'){
+        h+=`<div class="loading"><div class="spin"></div>Searching image…</div>`;
+      } else if(img&&img.url){
+        h+=`<div class="img-wrap"><img class="concept-img" src="${img.url}" alt="${id}"><div class="img-caption">${img.caption||''}</div></div>`;
+      } else if(img==='none'){
+        h+=`<div class="box" style="color:var(--muted);font-size:12px">No image found on Wikipedia for <em>${id}</em>.</div>`;
+      } else {
+        h+=`<button class="img-btn" onclick="fetchConceptImage('${esc(id)}')"><span class="img-icon">🖼</span>Get image to remember this concept</button>`;
+      }
+    }
+    if(p.examples.length){ h+=`<div class="sec">Examples</div>`; p.examples.forEach(ex=>{ const s=ex.sentence.replace(/<<(.+?)>>/g,'<span class="hl">$1</span>'); h+=`<div class="ex"><div class="ex-lbl">${ex.label}</div>${s}</div>`; }); }
+    const sc=simCache[id];
+    if(sc&&sc.length){ h+=`<div class="sec">Semantic connections</div><div class="chips">`; sc.forEach(s=>{ h+=`<span class="chip" onclick="quickExplore('${esc(s.word)}','concept')">${s.word}</span>`; }); h+=`</div>`; }
+    h+=`<div style="height:16px"></div>`;
+    el.innerHTML=h||`<div class="loading"><div class="spin"></div>Generating…</div>`;
+    return;
+  }
+
+  if(tab==='speak'){
+    let h=`<div class="sec">How to use in conversation</div>`;
+    if(p.speak.length) p.speak.forEach((s,i)=>{ const hl=s.replace(/<<(.+?)>>/g,'<span class="hl">$1</span>'); h+=`<div class="speak-card"><div class="sc-lbl">📢 Say it — ${i+1}</div><div class="sc-phrase">${hl}</div></div>`; });
+    else h+=`<div class="box" style="color:var(--muted)">Click the node again to regenerate.</div>`;
+    el.innerHTML=h+`<div style="height:16px"></div>`; return;
+  }
+
+  if(tab==='ideas'){
+    let h=`<div class="sec">Ideas to remember</div>`;
+    if(p.ideas.length) p.ideas.forEach(i=>{ h+=`<div class="idea">${i}</div>`; });
+    else h+=`<div class="box" style="color:var(--muted)">No ideas generated yet.</div>`;
+    el.innerHTML=h+`<div style="height:16px"></div>`; return;
+  }
+
+  if(tab==='similar'){
+    const sc=simCache[id];
+    if(!sc){
+      el.innerHTML=`<div class="sec">Semantic similarity</div><div class="loading"><div class="spin"></div>Calculating with Qwen…</div>`;
+      computeSimilarity(id,cat); return;
+    }
+    renderSimTab(id,sc); return;
+  }
+}
+
+async function computeSimilarity(id,cat){
+  const existing=nodes.filter(n=>n.id!==id).map(n=>n.id);
+  try{
+    const d=await apiPost('/api/ai/similarity',{word:id,cat,existing});
+    simCache[id]=d.results||[];
+    // save links for strong ones
+    const strong=d.results.filter(r=>r.score>=.5);
+    if(strong.length) await apiPost('/api/links/batch',strong.map(r=>({source:id,target:r.word,score:r.score,reason:r.reason,link_type:'semantic'})));
+    // save sim cache to server
+    fetch(`${API}/api/sim/${encodeURIComponent(id)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({results:d.results})});
+    await loadGraph(); hlNode(id);
+    renderSimTab(id,simCache[id]);
+  } catch(e){
+    document.getElementById('dScroll').innerHTML=`<div class="box bl-orange">Similarity error: ${e.message}</div>`;
+  }
+}
+
+function renderSimTab(id,sims){
+  const el=document.getElementById('dScroll');
+  let h=`<div class="sec">Semantic similarity</div>`;
+  if(!sims||!sims.length){ h+=`<div class="box" style="color:var(--muted)">No similar nodes found. Add more words to build connections.</div>`; el.innerHTML=h; return; }
+  [...sims].sort((a,b)=>b.score-a.score).forEach(s=>{
+    const pct=Math.round(s.score*100);
+    const col=s.score>=.75?'var(--green)':s.score>=.6?'var(--accent)':'var(--muted)';
+    h+=`<div class="sim-row" onclick="quickExplore('${esc(s.word)}','concept')">
+      <div style="flex:1"><div class="sim-word">${s.word}</div><div class="sim-reason">${s.reason}</div></div>
+      <div class="sim-bar-wrap"><div class="sim-bar" style="width:${pct}%;background:${col}"></div></div>
+      <div class="sim-pct" style="color:${col}">${pct}%</div>
+    </div>`;
+  });
+  h+=`<div style="font-size:11px;color:var(--muted);margin-top:8px">Scored by qwen2.5-coder:7b · click any row to explore</div><div style="height:16px"></div>`;
+  el.innerHTML=h;
+}
+
+function parseCard(raw){
+  const out={definition:'',examples:[],speak:[],ideas:[]};
+  if(!raw) return out;
+  const defM=raw.match(/## DEFINITION\s*\n([\s\S]*?)(?=##|$)/); if(defM) out.definition=defM[1].trim().replace(/\n/g,'<br>');
+  const exM=raw.match(/## EXAMPLES\s*\n([\s\S]*?)(?=##|$)/);
+  if(exM) exM[1].trim().split('\n').filter(l=>l.trim()).forEach(line=>{ const m=line.match(/^\[(.+?)\]:\s*(.+)/); if(m) out.examples.push({label:m[1],sentence:m[2]}); });
+  const spM=raw.match(/## HOW TO SPEAK\s*\n([\s\S]*?)(?=##|$)/);
+  if(spM) spM[1].trim().split('\n').filter(l=>l.trim()).forEach(l=>{ const c=l.replace(/^▸\s*/,'').trim(); if(c) out.speak.push(c); });
+  const idM=raw.match(/## IDEAS TO REMEMBER\s*\n([\s\S]*?)(?=##|$)/);
+  if(idM) idM[1].trim().split('\n').filter(l=>l.trim()).forEach(l=>{ if(l.trim()) out.ideas.push(l.trim()); });
+  return out;
+}
+
+function refreshNodeSizes(){
+  d3.selectAll('.node').each(function(d){
+    const n=nodes.find(v=>v.id===d.id); if(n) d.weight=n.weight;
+    const r=nodeR(d.id);
+    d3.select(this).select('circle:first-child').attr('r',r);
+    d3.select(this).select('text').attr('dy',r+13);
+  });
+}
+
+async function adjustWeight(delta){
+  if(!selectedId) return;
+  const n=nodes.find(v=>v.id===selectedId); if(!n) return;
+  const newW=Math.max(1,(n.weight||1)+delta);
+  const res=await apiPost(`/api/nodes/${encodeURIComponent(selectedId)}/weight`,{weight:newW});
+  n.weight=res.weight;
+  document.getElementById('weightVal').textContent=res.weight;
+  refreshNodeSizes();
+}
+
+function quickExplore(id,cat='concept'){
+  const exists=nodes.find(n=>n.id===id);
+  if(!exists){ apiPost('/api/nodes',{id,cat,notes:''}).then(()=>loadGraph()).then(()=>{ selectedId=id; hlNode(id); showDetail(id,cat); }); return; }
+  selectedId=id; hlNode(id); showDetail(id,cat);
+}
+
+async function fetchConceptImage(id){
+  imageCache[id]='loading';
+  renderTab(id,'concept');
+  try{
+    // ask qwen (via backend) to write a short visual scene description
+    const vr=await fetch(`${API}/api/ai/visual-prompt/${encodeURIComponent(id)}`);
+    const vd=await vr.json();
+    const visualPrompt=(vd.prompt||id).trim();
+    const encoded=encodeURIComponent(`${visualPrompt}, clean digital illustration, minimal, flat design`);
+    const imgUrl=`https://image.pollinations.ai/prompt/${encoded}?width=400&height=280&nologo=true`;
+    imageCache[id]={url:imgUrl, caption:visualPrompt};
+    // persist URL to DB so it survives page refresh
+    await apiPost(`/api/nodes/${encodeURIComponent(id)}/image`,{url:imgUrl});
+  } catch(e){
+    imageCache[id]='none';
+  }
+  renderTab(id,'concept');
+}
+
+function esc(s){ return (s||'').replace(/'/g,"\\'"); }
+
+// ══════════════════════════════════════════════
+//  ADD WORD
+// ══════════════════════════════════════════════
+function openModal(){
+  document.getElementById('newWord').value='';
+  document.getElementById('newNotes').value='';
+  hideSpellUI();
+  document.getElementById('addOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('newWord').focus(),80);
+}
+function closeModal(){ document.getElementById('addOverlay').classList.remove('open'); hideSpellUI(); }
+
+function hideSpellUI(){
+  document.getElementById('spellBox').style.display='none';
+  document.getElementById('spellChecking').style.display='none';
+}
+
+let _pendingWord=null, _pendingCat=null, _pendingNotes=null;
+
+async function saveWord(){
+  const word=document.getElementById('newWord').value.trim();
+  if(!word){ alert('Enter a word.'); return; }
+  const cat=document.getElementById('newCat').value;
+  const notes=document.getElementById('newNotes').value.trim();
+
+  // hide any previous suggestion and show checking state
+  hideSpellUI();
+  document.getElementById('spellChecking').style.display='flex';
+  const btn=document.querySelector('.m-save');
+  btn.disabled=true; btn.textContent='Checking…';
+
+  try{
+    const check=await apiPost('/api/ai/spellcheck',{word});
+    document.getElementById('spellChecking').style.display='none';
+    btn.disabled=false; btn.textContent='Add to Graph';
+
+    if(check.changed){
+      // store pending save and show suggestion
+      _pendingWord=word; _pendingCat=cat; _pendingNotes=notes;
+      document.getElementById('spellOriginal').textContent=word;
+      document.getElementById('spellCorrection').textContent=check.correction;
+      document.getElementById('spellBox').style.display='block';
+      // update input field to show the correction but keep original in _pendingWord
+      return; // wait for user choice
+    }
+  } catch(e){
+    // spell check failed silently — just proceed
+    document.getElementById('spellChecking').style.display='none';
+    btn.disabled=false; btn.textContent='Add to Graph';
+  }
+
+  await doSaveWord(word, cat, notes);
+}
+
+function useCorrection(){
+  const corrected=document.getElementById('spellCorrection').textContent;
+  document.getElementById('newWord').value=corrected;
+  hideSpellUI();
+  doSaveWord(corrected, _pendingCat, _pendingNotes);
+}
+
+function keepOriginal(){
+  hideSpellUI();
+  doSaveWord(_pendingWord, _pendingCat, _pendingNotes);
+}
+
+async function doSaveWord(word, cat, notes){
+  try{
+    const r=await apiPost('/api/nodes',{id:word,cat,notes});
+    if(r.error||r.detail){ alert(r.detail||r.error); return; }
+    closeModal();
+    await loadGraph();
+    selectedId=word; hlNode(word);
+    showDetail(word,cat);
+    const existing=nodes.filter(n=>n.id!==word).map(n=>n.id);
+    apiPost('/api/ai/similarity',{word,cat,existing}).then(async d=>{
+      if(d.results&&d.results.length){
+        simCache[word]=d.results;
+        await apiPost('/api/links/batch',d.results.map(r=>({source:word,target:r.word,score:r.score,reason:r.reason,link_type:'semantic'})));
+        fetch(`${API}/api/sim/${encodeURIComponent(word)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({results:d.results})});
+        await loadGraph(); hlNode(word);
+      }
+    });
+  } catch(e){ alert(`Error: ${e.message}`); }
+}
+document.getElementById('addOverlay').addEventListener('click',e=>{ if(e.target===e.currentTarget)closeModal(); });
+
+// ══════════════════════════════════════════════
+//  PHRASE MODE
+// ══════════════════════════════════════════════
+let phraseMode=false, pbWords=[];
+function togglePhraseMode(){
+  phraseMode=!phraseMode;
+  const btn=document.getElementById('phraseModeBtn');
+  const pp=document.getElementById('pbPanel');
+  const dp=document.getElementById('dPanel');
+  if(phraseMode){
+    btn.textContent='✕ Exit Phrase'; btn.classList.add('on'); pbWords=[]; pp.style.display='block';
+    dp.classList.remove('hidden');
+    document.getElementById('dhWord').textContent='Phrase Builder';
+    document.getElementById('dhCat').textContent='';
+    document.getElementById('dtabs').style.display='none';
+    document.getElementById('dScroll').innerHTML=`<div style="color:var(--muted);font-size:13px;padding:12px 0">Click nodes to combine words → <strong style="color:var(--green)">✦ Analyze</strong></div>`;
+    renderPbSlots();
+  } else {
+    btn.textContent='🔗 Phrase Mode'; btn.classList.remove('on'); pp.style.display='none'; pbWords=[];
+    document.getElementById('dtabs').style.display='flex';
+  }
+}
+function pbAdd(id){ if(!pbWords.includes(id)){pbWords.push(id);renderPbSlots();} }
+function pbPop(){ pbWords.pop(); renderPbSlots(); }
+function pbClear(){ pbWords=[]; renderPbSlots(); }
+function renderPbSlots(){
+  const el=document.getElementById('pbSlots');
+  if(!pbWords.length){el.innerHTML=`<span style="font-size:11px;color:var(--muted)">Click nodes…</span>`;return;}
+  el.innerHTML=pbWords.map(w=>`<span class="pbs">${w}</span>`).join(`<span style="color:var(--muted);padding:0 3px;font-size:12px">→</span>`);
+}
+
+async function pbAnalyze(){
+  if(pbWords.length<2){alert('Add at least 2 words.');return;}
+  const combo=pbWords.join(' + ');
+  document.getElementById('dScroll').innerHTML=`<div class="loading"><div class="spin"></div>Analyzing "${combo}"…</div><div class="streaming" id="sOut"></div>`;
+  const so=document.getElementById('sOut');
+  let full='';
+  try{
+    const r=await fetch(`${API}/api/ai/phrase`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({words:pbWords})});
+    const reader=r.body.getReader(); const dec=new TextDecoder();
+    while(true){ const {done,value}=await reader.read(); if(done)break; full+=dec.decode(value); if(so)so.textContent=full; }
+    const phraseId=pbWords.join(' ');
+    const pn=await apiPost('/api/nodes',{id:phraseId,cat:'phrase',notes:''}).catch(()=>{});
+    if(pn&&!pn.detail){
+      await apiPost('/api/links/batch',pbWords.map(w=>({source:phraseId,target:w,score:.7,reason:'phrase component',link_type:'phrase'})));
+      aiCache[phraseId]=full;
+      apiPost(`/api/nodes/${encodeURIComponent(phraseId)}/cache`,{word:phraseId,cache:full});
+      await loadGraph(); hlNode(phraseId);
+    }
+    document.getElementById('dScroll').innerHTML=`<div class="sec">Phrase: ${combo}</div><div class="box bl-green" style="white-space:pre-wrap;font-size:13px">${full}</div><div style="height:16px"></div>`;
+  } catch(e){ document.getElementById('dScroll').innerHTML=`<div class="box bl-orange">Error: ${e.message}</div>`; }
+}
+
+// ══════════════════════════════════════════════
+//  EXPORT
+// ══════════════════════════════════════════════
+async function exportGraph(){
+  const d=await fetch(`${API}/api/export`).then(r=>r.json());
+  const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='vocabgraph-export.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+loadGraph();
+window.addEventListener('resize',()=>{ initGraph(); if(selectedId)hlNode(selectedId); });
+</script>
+</body>
+</html>
