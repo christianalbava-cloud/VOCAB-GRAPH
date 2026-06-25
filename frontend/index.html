@@ -174,6 +174,105 @@ svg#graph{width:100%;height:100%;}
 .srch-cat{font-size:10px;color:var(--muted);margin-left:auto;text-transform:uppercase;letter-spacing:.5px;}
 .srch-empty{padding:8px 11px;font-size:12px;color:var(--muted);}
 
+/* DRAWER */
+.drw-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;opacity:0;pointer-events:none;transition:opacity .3s;}
+.drw-overlay.open{opacity:1;pointer-events:all;}
+.drawer{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);border-radius:18px 18px 0 0;z-index:301;transform:translateY(100%);transition:transform .38s cubic-bezier(.32,.72,0,1);max-height:82vh;display:flex;flex-direction:column;}
+.drawer.open{transform:translateY(0);}
+.drw-handle{width:38px;height:4px;background:var(--border);border-radius:2px;margin:10px auto 0;flex-shrink:0;cursor:grab;}
+.drw-hdr{padding:14px 22px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.drw-title{font-size:14px;font-weight:600;color:var(--text);font-family:'JetBrains Mono',monospace;letter-spacing:.5px;}
+.drw-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:0 2px;}
+.drw-close:hover{color:var(--text);}
+.drw-body{overflow-y:auto;padding:20px 22px 28px;display:flex;gap:18px;flex-wrap:wrap;}
+
+/* STATS CARD */
+.stats-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:18px;min-width:260px;flex:1;}
+.stats-card-title{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+.stats-card-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.stats-total{font-size:28px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text);margin-bottom:4px;}
+.stats-total-lbl{font-size:11px;color:var(--muted);margin-bottom:16px;}
+.stats-cat{margin-bottom:14px;}
+.stats-cat-hdr{display:flex;align-items:center;gap:7px;margin-bottom:6px;}
+.stats-cat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.stats-cat-name{font-size:12px;font-weight:600;}
+.stats-cat-total{font-size:11px;color:var(--muted);margin-left:auto;font-family:'JetBrains Mono',monospace;}
+.stats-weight-row{display:flex;align-items:center;gap:8px;padding:4px 0 4px 15px;}
+.stats-w-label{font-size:11px;color:var(--muted);width:58px;flex-shrink:0;}
+.stats-w-bar-wrap{flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden;}
+.stats-w-bar{height:100%;border-radius:3px;transition:width .5s ease;}
+.stats-w-count{font-size:11px;font-family:'JetBrains Mono',monospace;width:32px;text-align:right;flex-shrink:0;}
+
+/* SEMANTIC HELP CARD */
+.help-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:18px;min-width:310px;flex:2;}
+.help-section{margin-bottom:18px;}
+.help-section:last-child{margin-bottom:0;}
+.help-ttl{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:7px;}
+.help-ttl::after{content:'';flex:1;height:1px;background:var(--border);}
+.help-desc{font-size:12px;line-height:1.75;color:var(--muted);margin-bottom:10px;}
+.help-desc strong{color:var(--text);}
+.help-examples{display:flex;flex-direction:column;gap:5px;}
+.help-ex{display:flex;align-items:center;gap:8px;background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:11px;}
+.help-ex-pair{flex:1;font-family:'JetBrains Mono',monospace;color:var(--accent);}
+.help-ex-desc{flex:2;color:var(--muted);line-height:1.5;}
+.help-score{font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;width:38px;text-align:right;}
+.score-high{color:var(--green);}
+.score-mid{color:var(--yellow);}
+.score-low{color:var(--orange);}
+.link-legend{display:flex;flex-direction:column;gap:6px;}
+.link-leg-row{display:flex;align-items:center;gap:8px;font-size:11px;}
+.link-leg-line{width:28px;height:3px;border-radius:2px;flex-shrink:0;}
+
+/* DELETE NODE */
+.del-wrap{position:relative;display:flex;align-items:center;}
+.del-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px;line-height:1;opacity:.5;transition:opacity .15s,color .15s;}
+.del-btn:hover{opacity:1;color:var(--orange);}
+.del-confirm{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--orange);border-radius:8px;padding:8px 11px;white-space:nowrap;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.5);font-size:12px;color:var(--text);gap:7px;align-items:center;}
+.del-confirm.open{display:flex;}
+.del-yes{background:var(--orange);color:#0d1117;border:none;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;}
+.del-yes:hover{opacity:.85;}
+.del-no{background:transparent;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;}
+.del-no:hover{border-color:var(--muted);color:var(--text);}
+
+/* CATEGORY EDIT */
+.cat-edit-wrap{position:relative;display:inline-flex;align-items:center;gap:3px;}
+.cat-edit-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0 2px;line-height:1;opacity:.6;transition:opacity .15s;}
+.cat-edit-btn:hover{opacity:1;color:var(--accent);}
+.cat-pick{position:absolute;top:calc(100% + 4px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;z-index:50;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.5);min-width:150px;display:none;}
+.cat-pick.open{display:block;}
+.cat-pick-opt{padding:7px 13px;font-size:12px;cursor:pointer;transition:background .1s;display:flex;align-items:center;gap:7px;}
+.cat-pick-opt:hover{background:rgba(88,166,255,.08);}
+.cat-pick-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+/* CATEGORY SUGGESTION */
+.cat-suggest{display:none;align-items:center;gap:8px;padding:5px 0 2px;font-size:11px;color:var(--muted);}
+.cat-suggest.show{display:flex;}
+.cat-suggest-chip{background:rgba(88,166,255,.12);border:1px solid rgba(88,166,255,.35);color:var(--accent);border-radius:20px;padding:2px 10px;font-size:11px;cursor:pointer;transition:all .15s;}
+.cat-suggest-chip:hover{background:rgba(88,166,255,.25);}
+
+/* IMPORT MODAL */
+.imp-drop{border:2px dashed var(--border);border-radius:10px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:14px;}
+.imp-drop:hover,.imp-drop.drag{border-color:var(--accent);background:rgba(88,166,255,.05);}
+.imp-drop-icon{font-size:28px;margin-bottom:6px;}
+.imp-drop-lbl{font-size:13px;color:var(--muted);}
+.imp-drop-lbl strong{color:var(--accent);}
+.imp-preview{display:none;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:13px 14px;margin-bottom:14px;}
+.imp-preview-name{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--accent);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.imp-stat-row{display:flex;gap:16px;margin-bottom:10px;}
+.imp-stat{flex:1;text-align:center;}
+.imp-stat-num{font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text);}
+.imp-stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;}
+.imp-mode{display:flex;gap:8px;margin-bottom:2px;}
+.imp-mode-opt{flex:1;border:1px solid var(--border);border-radius:7px;padding:8px 10px;cursor:pointer;transition:all .2s;text-align:center;}
+.imp-mode-opt.sel{border-color:var(--accent);background:rgba(88,166,255,.08);}
+.imp-mode-opt-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px;}
+.imp-mode-opt-desc{font-size:10px;color:var(--muted);line-height:1.4;}
+.imp-mode-opt.sel .imp-mode-opt-title{color:var(--accent);}
+.imp-danger{font-size:11px;color:var(--orange);margin-top:6px;display:none;}
+.imp-result{display:none;background:rgba(63,185,80,.07);border:1px solid rgba(63,185,80,.3);border-radius:8px;padding:12px 14px;margin-bottom:14px;}
+.imp-result-row{font-size:12px;color:var(--muted);line-height:1.8;}
+.imp-result-row span{color:var(--green);font-weight:600;font-family:'JetBrains Mono',monospace;}
+
 /* CONCEPT IMAGE */
 .img-btn{display:flex;align-items:center;gap:7px;background:var(--s2);border:1px dashed var(--border);color:var(--muted);padding:9px 14px;border-radius:8px;font-size:12px;cursor:pointer;width:100%;transition:all .2s;margin-top:2px;}
 .img-btn:hover{border-color:var(--accent);color:var(--accent);}
@@ -210,17 +309,17 @@ svg#graph{width:100%;height:100%;}
   </div>
   
   <div class="hspacer"></div>
+  <button class="hbtn" onclick="openStatsDrawer()">📊 Stats</button>
   <button class="hbtn" id="phraseModeBtn" onclick="togglePhraseMode()">🔗 Phrase Mode</button>
   <a class="hbtn" href="/graph3d.html" style="text-decoration:none">✦ 3D View</a>
   <button class="hbtn" onclick="exportGraph()">⬇ Export</button>
+  <button class="hbtn" onclick="openImportModal()">⬆ Import</button>
   <button class="hbtn primary" onclick="openModal()">+ Add Word</button>
 </header>
 
 <div class="legend">
   <div class="leg"><div class="ldot" style="background:#58a6ff"></div>Concept</div>
   <div class="leg"><div class="ldot" style="background:#3fb950"></div>Phrase</div>
-  <div class="leg"><div class="ldot" style="background:#f78166"></div>Temporal</div>
-  <div class="leg"><div class="ldot" style="background:#d2a8ff"></div>Jargon</div>
   <span style="font-size:11px;color:var(--muted);margin-left:4px">· thick green = strong semantic link</span>
   <span class="hint">Click node · Drag · Scroll zoom</span>
 </div>
@@ -239,7 +338,14 @@ svg#graph{width:100%;height:100%;}
   <div id="dPanel" class="hidden">
     <div class="dh">
       <span class="dh-word" id="dhWord">—</span>
-      <span class="dh-cat" id="dhCat"></span>
+      <div class="cat-edit-wrap">
+        <span class="dh-cat" id="dhCat"></span>
+        <button class="cat-edit-btn" title="Change category" onclick="toggleCatPick()">✎</button>
+        <div class="cat-pick" id="catPick">
+          <div class="cat-pick-opt" onclick="pickCat('concept')"><div class="cat-pick-dot" style="background:#58a6ff"></div>Concept</div>
+          <div class="cat-pick-opt" onclick="pickCat('phrase')"><div class="cat-pick-dot" style="background:#3fb950"></div>Phrase</div>
+        </div>
+      </div>
       <div class="weight-ctrl" id="weightCtrl" style="display:none">
         <button onclick="adjustWeight(-1)" title="Decrease weight">−</button>
         <div class="weight-inner">
@@ -247,6 +353,14 @@ svg#graph{width:100%;height:100%;}
           <span class="weight-lbl">weight</span>
         </div>
         <button onclick="adjustWeight(+1)" title="Increase weight">+</button>
+      </div>
+      <div class="del-wrap" id="delWrap">
+        <button class="del-btn" id="delBtn" title="Remove word" onclick="askDeleteNode()">🗑</button>
+        <div class="del-confirm" id="delConfirm">
+          <span>Remove permanently?</span>
+          <button class="del-yes" onclick="confirmDeleteNode()">Yes</button>
+          <button class="del-no"  onclick="cancelDeleteNode()">No</button>
+        </div>
       </div>
       <button class="close-x" onclick="closeDetail()">×</button>
     </div>
@@ -274,14 +388,18 @@ svg#graph{width:100%;height:100%;}
   <div class="modal">
     <h3>Add to Vocab Graph</h3>
     <label>Word, phrase, or concept</label>
-    <input type="text" id="newWord" placeholder="e.g. idempotent, bottleneck, 'moving forward'…">
+    <input type="text" id="newWord" placeholder="e.g. idempotent, bottleneck, 'moving forward'…"
+      oninput="onNewWordInput(this.value)">
     <label>Category</label>
     <select id="newCat">
       <option value="concept">Concept — technical or abstract idea</option>
-      <option value="phrase">Phrase — set expression or idiom</option>
-      <option value="temporal">Temporal — time-related expression</option>
-      <option value="jargon">Jargon — industry-specific term</option>
+      <option value="phrase">Phrase — fixed expression, idiom, or time-related</option>
     </select>
+    <div class="cat-suggest" id="catSuggest">
+      <span>AI suggests:</span>
+      <span class="cat-suggest-chip" id="catSuggestChip" onclick="applyCatSuggestion()"></span>
+      <span id="catSuggestSpin" style="display:none"><div class="spin" style="width:10px;height:10px;border-width:1.5px"></div></span>
+    </div>
     <label>Your context (optional)</label>
     <textarea id="newNotes" placeholder="Where did you encounter this? What confused you?"></textarea>
 
@@ -311,25 +429,154 @@ svg#graph{width:100%;height:100%;}
   </div>
 </div>
 
+<!-- IMPORT MODAL -->
+<input type="file" id="importFileInput" accept=".json" style="display:none" onchange="onImportFile(this)">
+<div class="overlay" id="importOverlay">
+  <div class="modal" style="width:480px">
+    <h3>Import Vocab Graph</h3>
+
+    <div class="imp-drop" id="impDrop"
+      onclick="document.getElementById('importFileInput').click()"
+      ondragover="impDragOver(event)" ondragleave="impDragLeave(event)" ondrop="impDrop_(event)">
+      <div class="imp-drop-icon">📂</div>
+      <div class="imp-drop-lbl"><strong>Click to choose</strong> or drag a .json file here</div>
+    </div>
+
+    <div class="imp-preview" id="impPreview">
+      <div class="imp-preview-name" id="impFileName"></div>
+      <div class="imp-stat-row">
+        <div class="imp-stat"><div class="imp-stat-num" id="impNodeCount">0</div><div class="imp-stat-lbl">words</div></div>
+        <div class="imp-stat"><div class="imp-stat-num" id="impLinkCount">0</div><div class="imp-stat-lbl">links</div></div>
+        <div class="imp-stat"><div class="imp-stat-num" id="impExportedAt">—</div><div class="imp-stat-lbl">exported</div></div>
+      </div>
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px">Import mode</label>
+      <div class="imp-mode">
+        <div class="imp-mode-opt sel" id="impModeMerge" onclick="setImportMode('merge')">
+          <div class="imp-mode-opt-title">Merge</div>
+          <div class="imp-mode-opt-desc">Add new words, keep existing ones unchanged</div>
+        </div>
+        <div class="imp-mode-opt" id="impModeReplace" onclick="setImportMode('replace')">
+          <div class="imp-mode-opt-title">Replace</div>
+          <div class="imp-mode-opt-desc">Clear all current data, then import</div>
+        </div>
+      </div>
+      <div class="imp-danger" id="impDanger">Warning: this will delete all your current words and links.</div>
+    </div>
+
+    <div class="imp-result" id="impResult">
+      <div class="imp-result-row" id="impResultText"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="m-cancel" onclick="closeImportModal()">Close</button>
+      <button class="m-save" id="impBtn" onclick="runImport()" disabled style="opacity:.45">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- STATS DRAWER -->
+<div class="drw-overlay" id="drwOverlay" onclick="closeStatsDrawer()"></div>
+<div class="drawer" id="statsDrawer">
+  <div class="drw-handle"></div>
+  <div class="drw-hdr">
+    <span class="drw-title">VOCAB·STATS</span>
+    <button class="drw-close" onclick="closeStatsDrawer()">×</button>
+  </div>
+  <div class="drw-body">
+
+    <!-- LEFT: summary card -->
+    <div class="stats-card">
+      <div class="stats-card-title">Word count</div>
+      <div class="stats-total" id="statsTotalNum">—</div>
+      <div class="stats-total-lbl" id="statsTotalLbl">words in your graph</div>
+      <div id="statsCatBody"></div>
+    </div>
+
+    <!-- RIGHT: semantic help card -->
+    <div class="help-card">
+
+      <div class="help-section">
+        <div class="help-ttl">Semantic Connections</div>
+        <div class="help-desc">
+          A <strong>semantic connection</strong> is a link drawn between two words because they share
+          <strong>meaning, context, or domain</strong> — not spelling or sound.
+          When you add a word, the AI measures how closely it relates to every existing node
+          and draws a link where similarity crosses a threshold.
+        </div>
+        <div class="link-legend">
+          <div class="link-leg-row">
+            <div class="link-leg-line" style="background:rgba(63,185,80,.8);height:3px"></div>
+            <span style="color:var(--green);font-weight:600">Strong link</span>
+            <span style="color:var(--muted)">score ≥ 0.75 — concepts share the same domain or role</span>
+          </div>
+          <div class="link-leg-row">
+            <div class="link-leg-line" style="background:rgba(88,166,255,.6);height:2px"></div>
+            <span style="color:var(--accent);font-weight:600">Phrase link</span>
+            <span style="color:var(--muted)">node is a phrase built from those words</span>
+          </div>
+          <div class="link-leg-row">
+            <div class="link-leg-line" style="background:rgba(255,255,255,.3);height:1.5px"></div>
+            <span style="color:var(--muted);font-weight:600">Weak link</span>
+            <span style="color:var(--muted)">score &lt; 0.75 — loosely related, same neighborhood</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-ttl">Semantic Similarity — score 0 → 1</div>
+        <div class="help-desc">
+          The <strong>similarity score</strong> measures how much two words mean the same thing
+          <em>in the same context</em>. Two words can score high without being synonyms — they just
+          live in the same conceptual neighborhood.
+        </div>
+        <div class="help-examples">
+          <div class="help-ex">
+            <div class="help-ex-pair">deploy / release</div>
+            <div class="help-ex-desc">Almost the same action in tech — nearly synonyms</div>
+            <div class="help-score score-high">0.88</div>
+          </div>
+          <div class="help-ex">
+            <div class="help-ex-pair">car / vehicle</div>
+            <div class="help-ex-desc">One is a specific instance of the other</div>
+            <div class="help-score score-high">0.92</div>
+          </div>
+          <div class="help-ex">
+            <div class="help-ex-pair">deploy / container</div>
+            <div class="help-ex-desc">Same domain (DevOps), but different roles</div>
+            <div class="help-score score-mid">0.65</div>
+          </div>
+          <div class="help-ex">
+            <div class="help-ex-pair">latency / throughput</div>
+            <div class="help-ex-desc">Both measure performance, from opposite angles</div>
+            <div class="help-score score-mid">0.70</div>
+          </div>
+          <div class="help-ex">
+            <div class="help-ex-pair">car / happiness</div>
+            <div class="help-ex-desc">Completely unrelated domains — no connection drawn</div>
+            <div class="help-score score-low">0.05</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════
 //  API CLIENT
 // ══════════════════════════════════════════════
 const API = window.location.origin; // same origin as FastAPI
 
-const catColor = {concept:'#58a6ff',phrase:'#3fb950',temporal:'#f78166',jargon:'#d2a8ff',user:'#e3b341'};
+const catColor = {concept:'#58a6ff', phrase:'#3fb950', user:'#e3b341'};
 const catStyleMap = {
-  concept:  {color:'var(--accent)', border:'1px solid var(--accent)'},
-  phrase:   {color:'var(--green)',  border:'1px solid var(--green)'},
-  temporal: {color:'var(--orange)', border:'1px solid var(--orange)'},
-  jargon:   {color:'var(--purple)', border:'1px solid var(--purple)'},
-  user:     {color:'var(--yellow)', border:'1px solid var(--yellow)'},
+  concept: {color:'var(--accent)', border:'1px solid var(--accent)'},
+  phrase:  {color:'var(--green)',  border:'1px solid var(--green)'},
+  user:    {color:'var(--yellow)', border:'1px solid var(--yellow)'},
 };
 const clusterTargets = {
-  concept:  [.32, .36],
-  phrase:   [.68, .36],
-  temporal: [.68, .66],
-  jargon:   [.32, .66],
+  concept: [.35, .50],
+  phrase:  [.65, .50],
 };
 
 // ── health check ──
@@ -357,13 +604,34 @@ checkHealth(); setInterval(checkHealth,10000);
 let nodes=[], links=[], aiCache={}, simCache={}, imageCache={};
 
 async function loadGraph(){
-  const [ns,ls]=await Promise.all([
-    fetch(`${API}/api/nodes`).then(r=>r.json()),
-    fetch(`${API}/api/links`).then(r=>r.json()),
-  ]);
+  // snapshot current positions so nodes don't jump on reload
+  const savedPos = {};
+  if(sim) sim.nodes().forEach(n=>{ savedPos[n.id]={x:n.x, y:n.y}; });
+
+  let ns, ls;
+  try {
+    [ns,ls] = await Promise.all([
+      fetch(`${API}/api/nodes`).then(r=>{ if(!r.ok) throw new Error(`nodes ${r.status}`); return r.json(); }),
+      fetch(`${API}/api/links`).then(r=>{ if(!r.ok) throw new Error(`links ${r.status}`); return r.json(); }),
+    ]);
+  } catch(e) {
+    document.getElementById('nodeCount').textContent = `⚠ API unreachable — restart the server (${e.message})`;
+    document.getElementById('apiDot').className = 'sdot err';
+    document.getElementById('apiLabel').textContent = 'server down';
+    return;
+  }
+
   nodes=ns; links=ls;
   document.getElementById('nodeCount').textContent=`${nodes.length} nodes · ${links.length} links`;
   initGraph();
+
+  // restore positions for nodes that already existed
+  if(sim && Object.keys(savedPos).length){
+    sim.nodes().forEach(n=>{
+      if(savedPos[n.id]){ n.x=savedPos[n.id].x; n.y=savedPos[n.id].y; n.vx=0; n.vy=0; }
+    });
+    sim.alpha(0.08).restart();
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -451,7 +719,8 @@ function initGraph(){
   svgEl.call(zoomB);
 
   const nd=nodes.map(n=>({...n}));
-  const ld=links.map(l=>({...l}));
+  const nodeIds=new Set(nodes.map(n=>n.id));
+  const ld=links.filter(l=>nodeIds.has(l.source)&&nodeIds.has(l.target)).map(l=>({...l}));
 
   // cluster bubbles
   if(clusterOn){
@@ -467,7 +736,8 @@ function initGraph(){
   sim=d3.forceSimulation(nd)
     .force('link',d3.forceLink(ld).id(d=>d.id).distance(d=>160-(d.score||.5)*80).strength(d=>(d.score||.4)*.8))
     .force('charge',d3.forceManyBody().strength(-270))
-    .force('collide',d3.forceCollide(30));
+    .force('collide',d3.forceCollide(30))
+    .force('center',d3.forceCenter(W/2,H/2).strength(.04));
 
   if(clusterOn){
     sim.force('cluster',alpha=>{
@@ -477,8 +747,6 @@ function initGraph(){
         d.vy+=(H*t[1]-d.y)*alpha*.07;
       });
     });
-  } else {
-    sim.force('center',d3.forceCenter(W/2,H/2));
   }
 
   const linkSel=gEl.append('g').selectAll('line').data(ld).join('line')
@@ -528,7 +796,7 @@ function hlNode(id){
     .attr('stroke-width',n=>n.id===id?3:1.8)
     .attr('filter',n=>n.id===id?'url(#glow)':null);
   d3.selectAll('.link')
-    .attr('stroke-opacity',l=>{ const s=l.source.id||l.source,t=l.target.id||l.target; return s===id||t===id?1:.3; })
+    .attr('stroke-opacity',l=>{ const s=l.source.id||l.source,t=l.target.id||l.target; return s===id||t===id?1:.15; })
     .attr('stroke-width',l=>{ const s=l.source.id||l.source,t=l.target.id||l.target,base=(l.score||.5)>=.75?2.5:1.5; return s===id||t===id?base+1:base; });
 }
 
@@ -747,9 +1015,99 @@ async function adjustWeight(delta){
   refreshNodeSizes();
 }
 
+// ── DELETE NODE ──────────────────────────────────────────────
+function askDeleteNode(){
+  document.getElementById('delConfirm').classList.add('open');
+  setTimeout(()=>document.addEventListener('click', cancelDeleteOutside, {once:true}), 0);
+}
+function cancelDeleteOutside(e){
+  if(!document.getElementById('delConfirm').contains(e.target))
+    cancelDeleteNode();
+}
+function cancelDeleteNode(){
+  document.getElementById('delConfirm').classList.remove('open');
+}
+async function confirmDeleteNode(){
+  cancelDeleteNode();
+  if(!selectedId) return;
+  const id = selectedId;
+  await fetch(`${API}/api/nodes/${encodeURIComponent(id)}`, {method:'DELETE'});
+  closeDetail();
+  nodes = nodes.filter(n=>n.id!==id);
+  links = links.filter(l=>{
+    const s=l.source?.id||l.source, t=l.target?.id||l.target;
+    return s!==id && t!==id;
+  });
+  document.getElementById('nodeCount').textContent=`${nodes.length} nodes · ${links.length} links`;
+  initGraph();
+}
+
+// ── CATEGORY EDIT ────────────────────────────────────────────
+function toggleCatPick(){
+  const pick = document.getElementById('catPick');
+  pick.classList.toggle('open');
+  if(pick.classList.contains('open')){
+    setTimeout(()=>document.addEventListener('click', closeCatPickOutside, {once:true}), 0);
+  }
+}
+function closeCatPickOutside(e){
+  const pick = document.getElementById('catPick');
+  if(!pick.contains(e.target)) pick.classList.remove('open');
+}
+async function pickCat(cat){
+  document.getElementById('catPick').classList.remove('open');
+  if(!selectedId) return;
+  const n = nodes.find(v=>v.id===selectedId); if(!n) return;
+  if(n.cat === cat) return;
+  await fetch(`${API}/api/nodes/${encodeURIComponent(selectedId)}/category`, {
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({cat})
+  });
+  n.cat = cat;
+  const cs = catStyleMap[cat] || catStyleMap.user;
+  const ce = document.getElementById('dhCat');
+  ce.textContent = cat; ce.style.color = cs.color; ce.style.border = cs.border;
+  // refresh node color in graph
+  d3.selectAll('.node').filter(d=>d.id===selectedId)
+    .selectAll('circle')
+    .attr('fill', catColor[cat]||catColor.user)
+    .attr('stroke', catColor[cat]||catColor.user);
+}
+
+// ── CATEGORY SUGGESTION ───────────────────────────────────────
+let _catSuggestTimer = null;
+function onNewWordInput(val){
+  const suggest = document.getElementById('catSuggest');
+  const spin    = document.getElementById('catSuggestSpin');
+  const chip    = document.getElementById('catSuggestChip');
+  clearTimeout(_catSuggestTimer);
+  suggest.classList.remove('show');
+  if(val.trim().length < 2) return;
+  _catSuggestTimer = setTimeout(async ()=>{
+    spin.style.display = '';
+    suggest.classList.add('show');
+    chip.style.display = 'none';
+    try {
+      const res = await fetch(`${API}/api/ai/suggest-category`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({word: val.trim()})
+      }).then(r=>r.json());
+      const labels = {concept:'Concept', phrase:'Phrase', temporal:'Temporal'};
+      chip.textContent = labels[res.cat] || res.cat;
+      chip.dataset.cat = res.cat;
+      chip.style.display = '';
+    } catch(e){ suggest.classList.remove('show'); }
+    spin.style.display = 'none';
+  }, 700);
+}
+function applyCatSuggestion(){
+  const cat = document.getElementById('catSuggestChip').dataset.cat;
+  if(cat) document.getElementById('newCat').value = cat;
+}
+
 function quickExplore(id,cat='concept'){
   const exists=nodes.find(n=>n.id===id);
-  if(!exists){ apiPost('/api/nodes',{id,cat,notes:''}).then(()=>loadGraph()).then(()=>{ selectedId=id; hlNode(id); showDetail(id,cat); }); return; }
+  if(!exists) return; // don't auto-create — user must explicitly add via "+ Add Word"
   selectedId=id; hlNode(id); showDetail(id,cat);
 }
 
@@ -780,11 +1138,19 @@ function esc(s){ return (s||'').replace(/'/g,"\\'"); }
 function openModal(){
   document.getElementById('newWord').value='';
   document.getElementById('newNotes').value='';
+  document.getElementById('newCat').value='concept';
+  document.getElementById('catSuggest').classList.remove('show');
+  clearTimeout(_catSuggestTimer);
   hideSpellUI();
   document.getElementById('addOverlay').classList.add('open');
   setTimeout(()=>document.getElementById('newWord').focus(),80);
 }
-function closeModal(){ document.getElementById('addOverlay').classList.remove('open'); hideSpellUI(); }
+function closeModal(){
+  document.getElementById('addOverlay').classList.remove('open');
+  document.getElementById('catSuggest').classList.remove('show');
+  clearTimeout(_catSuggestTimer);
+  hideSpellUI();
+}
 
 function hideSpellUI(){
   document.getElementById('spellBox').style.display='none';
@@ -915,14 +1281,187 @@ async function pbAnalyze(){
 }
 
 // ══════════════════════════════════════════════
+//  STATS DRAWER
+// ══════════════════════════════════════════════
+function openStatsDrawer(){
+  buildStatsCard();
+  document.getElementById('drwOverlay').classList.add('open');
+  document.getElementById('statsDrawer').classList.add('open');
+}
+function closeStatsDrawer(){
+  document.getElementById('drwOverlay').classList.remove('open');
+  document.getElementById('statsDrawer').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeStatsDrawer(); });
+
+function buildStatsCard(){
+  const total = nodes.length;
+  document.getElementById('statsTotalNum').textContent = total;
+  document.getElementById('statsTotalLbl').textContent = total === 1 ? 'word in your graph' : 'words in your graph';
+
+  // group by category then weight
+  const catMap = {};
+  nodes.forEach(n => {
+    const c = n.cat || 'concept';
+    const w = n.weight || 1;
+    if(!catMap[c]) catMap[c] = {};
+    catMap[c][w] = (catMap[c][w] || 0) + 1;
+  });
+
+  const order = ['concept','phrase'];
+  const colors = {concept:'#58a6ff', phrase:'#3fb950'};
+
+  const maxInCat = cat => Object.values(catMap[cat]||{}).reduce((a,b)=>Math.max(a,b),1);
+
+  let html = '';
+  order.forEach(cat => {
+    const weightMap = catMap[cat];
+    if(!weightMap) return;
+    const catTotal = Object.values(weightMap).reduce((a,b)=>a+b,0);
+    const col = colors[cat] || '#8b949e';
+    const maxW = maxInCat(cat);
+    html += `<div class="stats-cat">
+      <div class="stats-cat-hdr">
+        <div class="stats-cat-dot" style="background:${col}"></div>
+        <span class="stats-cat-name" style="color:${col}">${cat.charAt(0).toUpperCase()+cat.slice(1)}</span>
+        <span class="stats-cat-total">${catTotal} words</span>
+      </div>`;
+    Object.keys(weightMap).sort((a,b)=>+a-+b).forEach(w => {
+      const cnt = weightMap[w];
+      const pct = Math.round((cnt / maxW) * 100);
+      html += `<div class="stats-weight-row">
+        <span class="stats-w-label">weight ${w}</span>
+        <div class="stats-w-bar-wrap"><div class="stats-w-bar" style="width:${pct}%;background:${col}55"></div></div>
+        <span class="stats-w-count" style="color:${col}">${cnt}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  document.getElementById('statsCatBody').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
 //  EXPORT
 // ══════════════════════════════════════════════
 async function exportGraph(){
-  const d=await fetch(`${API}/api/export`).then(r=>r.json());
-  const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='vocabgraph-export.json'; a.click();
+  const d = await fetch(`${API}/api/export`).then(r=>r.json());
+  const blob = new Blob([JSON.stringify(d, null, 2)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const ts   = new Date().toISOString().slice(0,10);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `vocabgraph-${ts}.json`;
+  a.click();
   URL.revokeObjectURL(url);
+}
+
+// ══════════════════════════════════════════════
+//  IMPORT
+// ══════════════════════════════════════════════
+let _importData = null;
+let _importMode = 'merge';
+
+function openImportModal(){
+  _importData = null;
+  _importMode = 'merge';
+  document.getElementById('impPreview').style.display = 'none';
+  document.getElementById('impResult').style.display  = 'none';
+  document.getElementById('impDrop').style.display    = '';
+  document.getElementById('impBtn').disabled = true;
+  document.getElementById('impBtn').style.opacity = '.45';
+  document.getElementById('impBtn').textContent = 'Import';
+  setImportMode('merge');
+  document.getElementById('importOverlay').classList.add('open');
+}
+function closeImportModal(){
+  document.getElementById('importOverlay').classList.remove('open');
+  document.getElementById('importFileInput').value = '';
+}
+
+function setImportMode(mode){
+  _importMode = mode;
+  document.getElementById('impModeMerge').classList.toggle('sel', mode==='merge');
+  document.getElementById('impModeReplace').classList.toggle('sel', mode==='replace');
+  document.getElementById('impDanger').style.display = mode==='replace' ? 'block' : 'none';
+}
+
+function impDragOver(e){
+  e.preventDefault();
+  document.getElementById('impDrop').classList.add('drag');
+}
+function impDragLeave(e){
+  document.getElementById('impDrop').classList.remove('drag');
+}
+function impDrop_(e){
+  e.preventDefault();
+  document.getElementById('impDrop').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if(file) readImportFile(file);
+}
+function onImportFile(input){
+  if(input.files[0]) readImportFile(input.files[0]);
+}
+
+function readImportFile(file){
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if(!Array.isArray(data.nodes)) throw new Error('Invalid format — missing nodes array');
+      _importData = data;
+
+      document.getElementById('impDrop').style.display = 'none';
+      document.getElementById('impResult').style.display = 'none';
+
+      document.getElementById('impFileName').textContent = file.name;
+      document.getElementById('impNodeCount').textContent = data.nodes.length;
+      document.getElementById('impLinkCount').textContent = (data.links||[]).length;
+      const ts = data.exported_at ? data.exported_at.slice(0,10) : '—';
+      document.getElementById('impExportedAt').textContent = ts;
+
+      document.getElementById('impPreview').style.display = '';
+      document.getElementById('impBtn').disabled = false;
+      document.getElementById('impBtn').style.opacity = '1';
+    } catch(e){
+      alert('Could not read file: ' + e.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function runImport(){
+  if(!_importData) return;
+  const btn = document.getElementById('impBtn');
+  btn.disabled = true;
+  btn.textContent = 'Importing…';
+
+  try {
+    const res = await fetch(`${API}/api/import`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        nodes: _importData.nodes,
+        links: _importData.links || [],
+        mode:  _importMode,
+      })
+    }).then(r=>r.json());
+
+    if(!res.ok) throw new Error(res.detail || 'Import failed');
+
+    document.getElementById('impPreview').style.display = 'none';
+    document.getElementById('impResult').style.display  = '';
+    document.getElementById('impResultText').innerHTML  =
+      `Added <span>${res.added_nodes}</span> words &nbsp;·&nbsp; `+
+      `Skipped <span style="color:var(--muted)">${res.skipped_nodes}</span> existing &nbsp;·&nbsp; `+
+      `Added <span>${res.added_links}</span> links`;
+
+    btn.textContent = 'Done';
+    await loadGraph();
+  } catch(e){
+    btn.disabled = false;
+    btn.textContent = 'Import';
+    alert('Import error: ' + e.message);
+  }
 }
 
 // ══════════════════════════════════════════════

@@ -71,6 +71,10 @@ def init_db():
         if "weight" not in cols:
             db.execute("ALTER TABLE nodes ADD COLUMN weight INTEGER DEFAULT 1")
 
+        # migrate: jargon → concept, temporal → phrase (both categories removed)
+        db.execute("UPDATE nodes SET cat='concept' WHERE cat='jargon'")
+        db.execute("UPDATE nodes SET cat='phrase'  WHERE cat='temporal'")
+
         # seed data if empty
         count = db.execute("SELECT COUNT(*) FROM nodes").fetchone()[0]
         if count == 0:
@@ -89,11 +93,11 @@ def _seed_db(db):
         ("graceful degradation", "phrase"),
         ("load balancer",        "jargon"),
         ("redundancy",           "concept"),
-        ("in the pipeline",      "temporal"),
-        ("moving forward",       "temporal"),
+        ("in the pipeline",      "phrase"),
+        ("moving forward",       "phrase"),
         ("bandwidth",            "jargon"),
         ("deadlock",             "concept"),
-        ("at the end of the day","temporal"),
+        ("at the end of the day","phrase"),
     ]
     seed_links = [
         ("idempotent",           "race condition",       0.70, "operation safety"),
@@ -239,7 +243,13 @@ def set_weight(node_id: str, body: dict):
 @app.get("/api/links")
 def get_links():
     with get_db() as db:
-        rows = db.execute("SELECT * FROM links ORDER BY score DESC").fetchall()
+        # only return links where both endpoints exist as nodes
+        rows = db.execute("""
+            SELECT l.* FROM links l
+            WHERE EXISTS (SELECT 1 FROM nodes n WHERE n.id = l.source)
+              AND EXISTS (SELECT 1 FROM nodes n WHERE n.id = l.target)
+            ORDER BY l.score DESC
+        """).fetchall()
     return rows_to_list(rows)
 
 @app.post("/api/links")
@@ -285,18 +295,130 @@ def set_sim(word: str, body: dict):
         )
     return {"ok": True}
 
+# ── CATEGORY ─────────────────────────────────────────────────
+VALID_CATS = {"concept", "phrase"}
+
+@app.patch("/api/nodes/{node_id}/category")
+def update_category(node_id: str, body: dict):
+    cat = body.get("cat", "").strip()
+    if cat not in VALID_CATS:
+        raise HTTPException(400, f"Invalid category. Must be one of: {', '.join(VALID_CATS)}")
+    with get_db() as db:
+        db.execute("UPDATE nodes SET cat=? WHERE id=?", (cat, node_id))
+    return {"ok": True, "id": node_id, "cat": cat}
+
+@app.post("/api/ai/suggest-category")
+async def suggest_category(body: dict):
+    word = body.get("word", "").strip()
+    if not word:
+        raise HTTPException(400, "word required")
+    prompt = f"""Classify the English word or phrase "{word}" into exactly one category.
+Categories:
+- concept: a technical or abstract idea (e.g. latency, idempotent, abstraction, bottleneck)
+- phrase: a fixed expression, idiom, multi-word expression, or time-related expression (e.g. "moving forward", "touch base", "in the meantime", "prior to")
+
+Reply with ONLY the single word: concept or phrase. No explanation."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.post(f"{OLLAMA_URL}/api/generate", json={
+                "model": OLLAMA_MODEL, "prompt": prompt, "stream": False
+            })
+            text = r.json().get("response", "").strip().lower()
+            cat = text if text in VALID_CATS else "concept"
+    except Exception:
+        cat = "concept"
+    return {"cat": cat}
+
 # ── EXPORT ───────────────────────────────────────────────────
 @app.get("/api/export")
 def export_graph():
-    """Export full graph as JSON"""
     with get_db() as db:
-        nodes = rows_to_list(db.execute("SELECT id,cat,notes,created_at FROM nodes").fetchall())
-        links = rows_to_list(db.execute("SELECT source,target,score,reason,link_type FROM links").fetchall())
+        nodes = rows_to_list(db.execute(
+            "SELECT id,cat,notes,created_at,ai_cache,image_url,weight FROM nodes"
+        ).fetchall())
+        links = rows_to_list(db.execute(
+            "SELECT source,target,score,reason,link_type FROM links"
+        ).fetchall())
     return {
         "exported_at": datetime.utcnow().isoformat(),
+        "version":     2,
         "model":       OLLAMA_MODEL,
         "nodes":       nodes,
         "links":       links,
+    }
+
+# ── IMPORT ───────────────────────────────────────────────────
+@app.post("/api/import")
+def import_graph(body: dict):
+    """
+    body: { nodes: [...], links: [...], mode: "merge"|"replace" }
+    merge  = skip nodes/links that already exist (default)
+    replace = wipe everything first, then insert
+    """
+    mode  = body.get("mode", "merge")
+    nodes = body.get("nodes", [])
+    links = body.get("links", [])
+
+    added_nodes = 0
+    skipped_nodes = 0
+    added_links = 0
+    skipped_links = 0
+
+    with get_db() as db:
+        if mode == "replace":
+            db.execute("DELETE FROM links")
+            db.execute("DELETE FROM nodes")
+
+        for n in nodes:
+            nid = n.get("id","").strip()
+            if not nid:
+                continue
+            existing = db.execute("SELECT id FROM nodes WHERE id=?", (nid,)).fetchone()
+            if existing and mode == "merge":
+                skipped_nodes += 1
+                continue
+            db.execute("""
+                INSERT OR REPLACE INTO nodes(id,cat,notes,created_at,ai_cache,image_url,weight)
+                VALUES(?,?,?,?,?,?,?)
+            """, (
+                nid,
+                n.get("cat","concept"),
+                n.get("notes",""),
+                n.get("created_at", datetime.utcnow().isoformat()),
+                n.get("ai_cache",""),
+                n.get("image_url",""),
+                n.get("weight", 1),
+            ))
+            added_nodes += 1
+
+        for l in links:
+            src = l.get("source","").strip()
+            tgt = l.get("target","").strip()
+            if not src or not tgt:
+                continue
+            existing = db.execute(
+                "SELECT rowid FROM links WHERE source=? AND target=?", (src, tgt)
+            ).fetchone()
+            if existing and mode == "merge":
+                skipped_links += 1
+                continue
+            db.execute("""
+                INSERT OR REPLACE INTO links(source,target,score,reason,link_type)
+                VALUES(?,?,?,?,?)
+            """, (
+                src, tgt,
+                l.get("score", 0.5),
+                l.get("reason",""),
+                l.get("link_type","semantic"),
+            ))
+            added_links += 1
+
+    return {
+        "ok": True,
+        "added_nodes":   added_nodes,
+        "skipped_nodes": skipped_nodes,
+        "added_links":   added_links,
+        "skipped_links": skipped_links,
     }
 
 # ── AI: STREAM KNOWLEDGE CARD ────────────────────────────────
@@ -306,7 +428,7 @@ async def stream_card(word: str, cat: str = "concept", notes: str = ""):
     cat_desc = {
         "concept":  "an abstract or technical concept in systems engineering",
         "phrase":   "an English phrase or expression",
-        "temporal": "a time-related phrase or expression in English",
+        "temporal": "an English phrase or expression",
         "jargon":   "technical industry jargon in systems engineering",
     }.get(cat, "a word or expression")
 
