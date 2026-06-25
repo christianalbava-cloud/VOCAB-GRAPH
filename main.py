@@ -296,7 +296,7 @@ def set_sim(word: str, body: dict):
     return {"ok": True}
 
 # ── CATEGORY ─────────────────────────────────────────────────
-VALID_CATS = {"concept", "phrase"}
+VALID_CATS = {"concept", "phrase", "composed"}
 
 @app.patch("/api/nodes/{node_id}/category")
 def update_category(node_id: str, body: dict):
@@ -324,7 +324,7 @@ Reply with ONLY the single word: concept or phrase. No explanation."""
                 "model": OLLAMA_MODEL, "prompt": prompt, "stream": False
             })
             text = r.json().get("response", "").strip().lower()
-            cat = text if text in VALID_CATS else "concept"
+            cat = text if text in {"concept", "phrase"} else "concept"
     except Exception:
         cat = "concept"
     return {"cat": cat}
@@ -605,6 +605,86 @@ Keep it short, practical, and easy to understand."""
                 async with client.stream(
                     "POST",
                     f"{OLLAMA_URL}/api/generate",
+                    json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": True},
+                ) as r:
+                    async for line in r.aiter_lines():
+                        if line:
+                            try:
+                                chunk = json.loads(line)
+                                if chunk.get("response"):
+                                    yield chunk["response"]
+                            except Exception:
+                                pass
+        except Exception as e:
+            yield f"\n\n[Error: {e}]"
+
+    return StreamingResponse(generate(), media_type="text/plain")
+
+# ── AI: VERB TENSES ──────────────────────────────────────────
+@app.get("/api/ai/tenses/{word}")
+async def word_tenses(word: str):
+    prompt = f"""You are an English grammar teacher for a Spanish-speaking systems engineer.
+The word or phrase to study is: "{word}"
+
+First, determine if "{word}" is a verb or not.
+
+If it is NOT a verb, output only:
+## NOT A VERB
+State what part of speech it is and any relevant grammatical forms (plural, adjective degrees, etc.).
+
+If it IS a verb (or can be used as one), output each section below with the exact header, the conjugation, and 3 example sentences in a systems engineering or work context.
+
+## INFINITIVE
+Conjugation: to ___
+Example 1: "..."
+Example 2: "..."
+Example 3: "..."
+
+## PRESENT SIMPLE
+Conjugation:
+I / You / We / They: ___
+He / She / It: ___
+Example 1: "..."
+Example 2: "..."
+Example 3: "..."
+
+## PRESENT CONTINUOUS
+Conjugation: I am ___ing / He is ___ing / They are ___ing
+Example 1: "..."
+Example 2: "..."
+Example 3: "..."
+
+## PAST SIMPLE
+Conjugation: I / He / She / We / They: ___
+Example 1: "..."
+Example 2: "..."
+Example 3: "..."
+
+## PAST PARTICIPLE
+Conjugation: have/has ___
+Example 1: "..."
+Example 2: "..."
+Example 3: "..."
+
+## FUTURE SIMPLE
+Conjugation: will ___
+Example 1: "..."
+Example 2: "..."
+Example 3: "..."
+
+## PRESENT PERFECT
+Conjugation: have/has + past participle
+Example 1: "..."
+Example 2: "..."
+Example 3: "..."
+
+Keep it simple and practical for a non-native speaker. Fill every ___ with the real form of "{word}"."""
+
+    async def generate():
+        try:
+            async with httpx.AsyncClient(timeout=120) as client:
+                async with client.stream(
+                    "POST", f"{OLLAMA_URL}/api/generate",
                     json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": True},
                 ) as r:
                     async for line in r.aiter_lines():

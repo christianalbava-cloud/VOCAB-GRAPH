@@ -278,6 +278,19 @@ svg#graph{width:100%;height:100%;}
 .imp-result-row{font-size:12px;color:var(--muted);line-height:1.8;}
 .imp-result-row span{color:var(--green);font-weight:600;font-family:'JetBrains Mono',monospace;}
 
+/* TENSE CARDS */
+.tense-card{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 13px;margin-bottom:6px;}
+.tense-name{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:5px;}
+.tense-body{font-size:13px;line-height:1.75;}
+.tense-ex{font-size:11px;color:var(--muted);margin-top:4px;font-style:italic;border-top:1px solid var(--border);padding-top:4px;}
+.not-verb-box{background:var(--s2);border:1px solid var(--border);border-left:3px solid var(--yellow);border-radius:6px;padding:11px 13px;font-size:13px;line-height:1.7;}
+
+/* CATEGORY FILTER */
+.flt-sep{width:1px;height:16px;background:var(--border);margin:0 4px;}
+.flt-btn{display:flex;align-items:center;gap:5px;background:transparent;border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--muted);transition:all .15s;}
+.flt-btn.on{color:var(--text);border-color:currentColor;}
+.flt-btn .fldot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
 /* CONCEPT IMAGE */
 .img-btn{display:flex;align-items:center;gap:7px;background:var(--s2);border:1px dashed var(--border);color:var(--muted);padding:9px 14px;border-radius:8px;font-size:12px;cursor:pointer;width:100%;transition:all .2s;margin-top:2px;}
 .img-btn:hover{border-color:var(--accent);color:var(--accent);}
@@ -323,9 +336,10 @@ svg#graph{width:100%;height:100%;}
 </header>
 
 <div class="legend">
-  <div class="leg"><div class="ldot" style="background:#58a6ff"></div>Concept</div>
-  <div class="leg"><div class="ldot" style="background:#3fb950"></div>Phrase</div>
-  <span style="font-size:11px;color:var(--muted);margin-left:4px">· thick green = strong semantic link</span>
+  <button class="flt-btn on" id="flt-concept" style="color:#58a6ff;border-color:#58a6ff" onclick="toggleFilter('concept')"><div class="fldot" style="background:#58a6ff"></div>Concept</button>
+  <button class="flt-btn on" id="flt-phrase"  style="color:#3fb950;border-color:#3fb950"  onclick="toggleFilter('phrase')"><div class="fldot" style="background:#3fb950"></div>Phrase</button>
+  <button class="flt-btn on" id="flt-composed" style="color:#d2a8ff;border-color:#d2a8ff" onclick="toggleFilter('composed')"><div class="fldot" style="background:#d2a8ff"></div>Composed</button>
+  <span style="font-size:11px;color:var(--muted);margin-left:8px">· thick green = strong semantic link</span>
   <span class="hint">Click node · Drag · Scroll zoom</span>
 </div>
 
@@ -349,6 +363,7 @@ svg#graph{width:100%;height:100%;}
         <div class="cat-pick" id="catPick">
           <div class="cat-pick-opt" onclick="pickCat('concept')"><div class="cat-pick-dot" style="background:#58a6ff"></div>Concept</div>
           <div class="cat-pick-opt" onclick="pickCat('phrase')"><div class="cat-pick-dot" style="background:#3fb950"></div>Phrase</div>
+          <div class="cat-pick-opt" onclick="pickCat('composed')"><div class="cat-pick-dot" style="background:#d2a8ff"></div>Composed</div>
         </div>
       </div>
       <div class="weight-ctrl" id="weightCtrl" style="display:none">
@@ -359,7 +374,9 @@ svg#graph{width:100%;height:100%;}
         </div>
         <button onclick="adjustWeight(+1)" title="Increase weight">+</button>
       </div>
+      <button class="regen-btn" id="speakBtn" title="Listen to pronunciation" onclick="speakWord()">🔊</button>
       <button class="regen-btn" id="regenBtn" title="Re-research with Ollama" onclick="forceResearch()">↻</button>
+      <button class="regen-btn" title="Focus node in graph" onclick="focusSelected()">👁</button>
       <div class="del-wrap" id="delWrap">
         <button class="del-btn" id="delBtn" title="Remove word" onclick="askDeleteNode()">🗑</button>
         <div class="del-confirm" id="delConfirm">
@@ -374,6 +391,7 @@ svg#graph{width:100%;height:100%;}
       <div class="dtab on"  data-tab="learn"   onclick="switchTab(this)">📖 Learn</div>
       <div class="dtab"     data-tab="speak"   onclick="switchTab(this)">🗣 Speak</div>
       <div class="dtab"     data-tab="ideas"   onclick="switchTab(this)">💡 Ideas</div>
+      <div class="dtab"     data-tab="tenses"  onclick="switchTab(this)">⏱ Tenses</div>
       <div class="dtab"     data-tab="similar" onclick="switchTab(this)">🔗 Similar</div>
     </div>
     <div class="dscroll" id="dScroll"></div>
@@ -574,15 +592,17 @@ svg#graph{width:100%;height:100%;}
 // ══════════════════════════════════════════════
 const API = window.location.origin; // same origin as FastAPI
 
-const catColor = {concept:'#58a6ff', phrase:'#3fb950', user:'#e3b341'};
+const catColor = {concept:'#58a6ff', phrase:'#3fb950', composed:'#d2a8ff', user:'#e3b341'};
 const catStyleMap = {
-  concept: {color:'var(--accent)', border:'1px solid var(--accent)'},
-  phrase:  {color:'var(--green)',  border:'1px solid var(--green)'},
-  user:    {color:'var(--yellow)', border:'1px solid var(--yellow)'},
+  concept:  {color:'var(--accent)', border:'1px solid var(--accent)'},
+  phrase:   {color:'var(--green)',  border:'1px solid var(--green)'},
+  composed: {color:'var(--purple)', border:'1px solid var(--purple)'},
+  user:     {color:'var(--yellow)', border:'1px solid var(--yellow)'},
 };
 const clusterTargets = {
-  concept: [.35, .50],
-  phrase:  [.65, .50],
+  concept:  [.30, .45],
+  phrase:   [.70, .45],
+  composed: [.50, .78],
 };
 
 // ── health check ──
@@ -794,6 +814,7 @@ function initGraph(){
   });
 
   if(selectedId) setTimeout(()=>hlNode(selectedId),300);
+  setTimeout(applyFilters,0);
 }
 
 function hlNode(id){
@@ -945,6 +966,15 @@ function renderTab(id,cat){
     el.innerHTML=h+`<div style="height:16px"></div>`; return;
   }
 
+  if(tab==='tenses'){
+    const tc=tensesCache[id];
+    if(!tc){
+      el.innerHTML=`<div class="sec">Verb tenses</div><div class="loading"><div class="spin"></div>Asking Qwen…</div><div class="streaming" id="sOut"></div>`;
+      streamTenses(id); return;
+    }
+    renderTensesTab(id,tc); return;
+  }
+
   if(tab==='similar'){
     const sc=simCache[id];
     if(!sc){
@@ -989,6 +1019,97 @@ function renderSimTab(id,sims){
   el.innerHTML=h;
 }
 
+// ══════════════════════════════════════════════
+//  TENSES TAB
+// ══════════════════════════════════════════════
+let tensesCache={};
+
+async function streamTenses(id){
+  let full='';
+  const so=document.getElementById('sOut');
+  try{
+    const r=await fetch(`${API}/api/ai/tenses/${encodeURIComponent(id)}`);
+    const reader=r.body.getReader(); const dec=new TextDecoder();
+    while(true){ const {done,value}=await reader.read(); if(done)break; full+=dec.decode(value); if(so)so.textContent=full; }
+    tensesCache[id]=full;
+    renderTensesTab(id,full);
+  } catch(e){
+    document.getElementById('dScroll').innerHTML=`<div class="box bl-orange">Tenses error: ${e.message}</div>`;
+  }
+}
+
+const TENSE_LABELS={
+  'INFINITIVE':'Infinitive','PRESENT SIMPLE':'Present Simple',
+  'PRESENT CONTINUOUS':'Present Continuous','PAST SIMPLE':'Past Simple',
+  'PAST PARTICIPLE':'Past Participle','FUTURE SIMPLE':'Future Simple',
+  'PRESENT PERFECT':'Present Perfect','EXAMPLES':'Examples',
+  'NOT A VERB':'Note',
+};
+
+function parseTenses(raw){
+  const sections=[];
+  const re=/## ([A-Z ]+)\s*\n([\s\S]*?)(?=##|$)/gi;
+  let m;
+  while((m=re.exec(raw))!==null){
+    const key=m[1].trim().toUpperCase();
+    const body=m[2].trim();
+    if(body) sections.push({key, label:TENSE_LABELS[key]||key.charAt(0)+key.slice(1).toLowerCase(), body});
+  }
+  return sections;
+}
+
+function renderTensesTab(id,raw){
+  const el=document.getElementById('dScroll');
+  const sections=parseTenses(raw);
+  if(!sections.length){
+    el.innerHTML=`<div class="sec">Verb tenses</div><div class="box" style="color:var(--muted)">No tense data — click ↻ to regenerate.</div>`;
+    return;
+  }
+  let h=`<div class="sec">Verb tenses — ${id}</div>`;
+  sections.forEach(s=>{
+    const lines=s.body.split('\n').filter(l=>l.trim());
+    let conjugation='';
+    const examples=[];
+    lines.forEach(l=>{
+      if(/^example\s*\d*\s*:/i.test(l)) examples.push(l.replace(/^example\s*\d*\s*:\s*/i,'').replace(/^"|"$/g,'').trim());
+      else conjugation+=(conjugation?'<br>':'')+l;
+    });
+    h+=`<div class="tense-card">
+      <div class="tense-name">${s.label}</div>
+      <div class="tense-body">${conjugation}</div>
+      ${examples.length?`<div class="tense-ex">${examples.map(e=>`💬 ${e}`).join('<br>')}</div>`:''}
+    </div>`;
+  });
+  h+=`<div style="height:16px"></div>`;
+  el.innerHTML=h;
+}
+
+// ══════════════════════════════════════════════
+//  CATEGORY FILTER
+// ══════════════════════════════════════════════
+const categoryFilters=new Set(['concept','phrase','composed']);
+
+function toggleFilter(cat){
+  if(categoryFilters.has(cat)) categoryFilters.delete(cat);
+  else categoryFilters.add(cat);
+  const btn=document.getElementById(`flt-${cat}`);
+  if(btn) btn.classList.toggle('on', categoryFilters.has(cat));
+  applyFilters();
+}
+
+function applyFilters(){
+  d3.selectAll('.node').style('display', d=>categoryFilters.has(d.cat||'concept')?null:'none');
+  d3.selectAll('.link').style('display', l=>{
+    const sc=typeof l.source==='object'?l.source.cat:nodes.find(n=>n.id===l.source)?.cat;
+    const tc=typeof l.target==='object'?l.target.cat:nodes.find(n=>n.id===l.target)?.cat;
+    return categoryFilters.has(sc||'concept')&&categoryFilters.has(tc||'concept')?null:'none';
+  });
+  const visible=nodes.filter(n=>categoryFilters.has(n.cat||'concept')).length;
+  const total=nodes.length;
+  document.getElementById('nodeCount').textContent=
+    visible===total?`${total} nodes · ${links.length} links`:`${visible}/${total} nodes (filtered) · ${links.length} links`;
+}
+
 function parseCard(raw){
   const out={definition:'',examples:[],speak:[],ideas:[]};
   if(!raw) return out;
@@ -1002,12 +1123,32 @@ function parseCard(raw){
   return out;
 }
 
+function speakWord(){
+  if(!selectedId || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(selectedId);
+  u.lang = 'en-US';
+  u.rate = 0.85;
+  window.speechSynthesis.speak(u);
+}
+
+function focusSelected(){
+  if(!selectedId||!sim) return;
+  const dn=sim.nodes().find(n=>n.id===selectedId); if(!dn) return;
+  const panel=document.getElementById('gPanel');
+  const W=panel.clientWidth, H=panel.clientHeight, scale=1.8;
+  svgEl.transition().duration(700).call(
+    zoomB.transform, d3.zoomIdentity.translate(W/2-scale*dn.x, H/2-scale*dn.y).scale(scale)
+  );
+}
+
 async function forceResearch(){
   if(!selectedId) return;
   const n=nodes.find(v=>v.id===selectedId); if(!n) return;
   const btn=document.getElementById('regenBtn');
   btn.classList.add('spinning'); btn.disabled=true;
   delete aiCache[selectedId];
+  delete tensesCache[selectedId];
   await apiPost(`/api/nodes/${encodeURIComponent(selectedId)}/cache`,{word:selectedId,cache:''});
   btn.classList.remove('spinning'); btn.disabled=false;
   activeTab='learn';
@@ -1126,8 +1267,16 @@ function applyCatSuggestion(){
 
 function quickExplore(id,cat='concept'){
   const exists=nodes.find(n=>n.id===id);
-  if(!exists) return; // don't auto-create — user must explicitly add via "+ Add Word"
+  if(!exists) return;
   selectedId=id; hlNode(id); showDetail(id,cat);
+  const dn=sim&&sim.nodes().find(n=>n.id===id);
+  if(dn){
+    const panel=document.getElementById('gPanel');
+    const W=panel.clientWidth, H=panel.clientHeight, scale=1.8;
+    svgEl.transition().duration(700).call(
+      zoomB.transform, d3.zoomIdentity.translate(W/2-scale*dn.x, H/2-scale*dn.y).scale(scale)
+    );
+  }
 }
 
 async function fetchConceptImage(id){
@@ -1288,7 +1437,7 @@ async function pbAnalyze(){
     const reader=r.body.getReader(); const dec=new TextDecoder();
     while(true){ const {done,value}=await reader.read(); if(done)break; full+=dec.decode(value); if(so)so.textContent=full; }
     const phraseId=pbWords.join(' ');
-    const pn=await apiPost('/api/nodes',{id:phraseId,cat:'phrase',notes:''}).catch(()=>{});
+    const pn=await apiPost('/api/nodes',{id:phraseId,cat:'composed',notes:''}).catch(()=>{});
     if(pn&&!pn.detail){
       await apiPost('/api/links/batch',pbWords.map(w=>({source:phraseId,target:w,score:.7,reason:'phrase component',link_type:'phrase'})));
       aiCache[phraseId]=full;
@@ -1327,8 +1476,8 @@ function buildStatsCard(){
     catMap[c][w] = (catMap[c][w] || 0) + 1;
   });
 
-  const order = ['concept','phrase'];
-  const colors = {concept:'#58a6ff', phrase:'#3fb950'};
+  const order = ['concept','phrase','composed'];
+  const colors = {concept:'#58a6ff', phrase:'#3fb950', composed:'#d2a8ff'};
 
   const maxInCat = cat => Object.values(catMap[cat]||{}).reduce((a,b)=>Math.max(a,b),1);
 
