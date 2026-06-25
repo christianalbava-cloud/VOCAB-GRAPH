@@ -223,6 +223,11 @@ svg#graph{width:100%;height:100%;}
 .link-leg-row{display:flex;align-items:center;gap:8px;font-size:11px;}
 .link-leg-line{width:28px;height:3px;border-radius:2px;flex-shrink:0;}
 
+/* REGEN BUTTON */
+.regen-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 4px;line-height:1;opacity:.5;transition:opacity .15s,color .15s,transform .3s;}
+.regen-btn:hover{opacity:1;color:var(--accent);}
+.regen-btn.spinning{animation:spin .7s linear infinite;opacity:1;color:var(--accent);}
+
 /* DELETE NODE */
 .del-wrap{position:relative;display:flex;align-items:center;}
 .del-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px;line-height:1;opacity:.5;transition:opacity .15s,color .15s;}
@@ -354,6 +359,7 @@ svg#graph{width:100%;height:100%;}
         </div>
         <button onclick="adjustWeight(+1)" title="Increase weight">+</button>
       </div>
+      <button class="regen-btn" id="regenBtn" title="Re-research with Ollama" onclick="forceResearch()">↻</button>
       <div class="del-wrap" id="delWrap">
         <button class="del-btn" id="delBtn" title="Remove word" onclick="askDeleteNode()">🗑</button>
         <div class="del-confirm" id="delConfirm">
@@ -875,7 +881,7 @@ async function streamDetail(id,cat){
     // save to server cache
     apiPost(`/api/nodes/${encodeURIComponent(id)}/cache`,{word:id,cache:full});
     // extract related → save links
-    const relM=full.match(/## RELATED WORDS\s*\n([^\n#]+)/);
+    const relM=full.match(/## RELATED WORDS\s*\n([^\n#]+)/i);
     if(relM){
       const rels=relM[1].split(',').map(s=>s.trim()).filter(Boolean);
       const newNodes=rels.filter(r=>!nodes.find(n=>n.id===r)).map(r=>({id:r,cat:'concept'}));
@@ -986,14 +992,27 @@ function renderSimTab(id,sims){
 function parseCard(raw){
   const out={definition:'',examples:[],speak:[],ideas:[]};
   if(!raw) return out;
-  const defM=raw.match(/## DEFINITION\s*\n([\s\S]*?)(?=##|$)/); if(defM) out.definition=defM[1].trim().replace(/\n/g,'<br>');
-  const exM=raw.match(/## EXAMPLES\s*\n([\s\S]*?)(?=##|$)/);
+  const defM=raw.match(/## DEFINITION\s*\n([\s\S]*?)(?=##|$)/i); if(defM) out.definition=defM[1].trim().replace(/\n/g,'<br>');
+  const exM=raw.match(/## EXAMPLES\s*\n([\s\S]*?)(?=##|$)/i);
   if(exM) exM[1].trim().split('\n').filter(l=>l.trim()).forEach(line=>{ const m=line.match(/^\[(.+?)\]:\s*(.+)/); if(m) out.examples.push({label:m[1],sentence:m[2]}); });
-  const spM=raw.match(/## HOW TO SPEAK\s*\n([\s\S]*?)(?=##|$)/);
+  const spM=raw.match(/## HOW TO SPEAK\s*\n([\s\S]*?)(?=##|$)/i);
   if(spM) spM[1].trim().split('\n').filter(l=>l.trim()).forEach(l=>{ const c=l.replace(/^▸\s*/,'').trim(); if(c) out.speak.push(c); });
-  const idM=raw.match(/## IDEAS TO REMEMBER\s*\n([\s\S]*?)(?=##|$)/);
+  const idM=raw.match(/## IDEAS TO REMEMBER\s*\n([\s\S]*?)(?=##|$)/i);
   if(idM) idM[1].trim().split('\n').filter(l=>l.trim()).forEach(l=>{ if(l.trim()) out.ideas.push(l.trim()); });
   return out;
+}
+
+async function forceResearch(){
+  if(!selectedId) return;
+  const n=nodes.find(v=>v.id===selectedId); if(!n) return;
+  const btn=document.getElementById('regenBtn');
+  btn.classList.add('spinning'); btn.disabled=true;
+  delete aiCache[selectedId];
+  await apiPost(`/api/nodes/${encodeURIComponent(selectedId)}/cache`,{word:selectedId,cache:''});
+  btn.classList.remove('spinning'); btn.disabled=false;
+  activeTab='learn';
+  document.querySelectorAll('.dtab').forEach(t=>t.classList.toggle('on',t.dataset.tab==='learn'));
+  streamDetail(selectedId,n.cat);
 }
 
 function refreshNodeSizes(){
