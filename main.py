@@ -1,6 +1,6 @@
 """
 VocabGraph — FastAPI backend
-Handles: SQLite persistence, Ollama proxy, semantic similarity, streaming
+Handles: SQLite persistence, LLM proxy (Ollama or Groq), semantic similarity, streaming
 """
 
 from fastapi import FastAPI, HTTPException
@@ -8,15 +8,75 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, AsyncGenerator
 import sqlite3, json, httpx, asyncio, re, os
 from pathlib import Path
 from datetime import datetime
 
 # ── CONFIG ────────────────────────────────────────────────────
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")   # "ollama" | "groq"
+
+# Ollama settings (used when LLM_PROVIDER=ollama)
 OLLAMA_URL   = os.getenv("OLLAMA_URL",   "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
-DB_PATH      = os.getenv("DB_PATH",      "vocabgraph.db")
+
+# Groq settings (used when LLM_PROVIDER=groq)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL   = os.getenv("GROQ_MODEL",   "llama-3.3-70b-versatile")
+
+DB_PATH = os.getenv("DB_PATH", "vocabgraph.db")
+
+def _active_model() -> str:
+    return GROQ_MODEL if LLM_PROVIDER == "groq" else OLLAMA_MODEL
+
+# ── LLM ADAPTERS ─────────────────────────────────────────────
+async def _llm_generate(prompt: str, timeout: int = 60) -> str:
+    """Non-streaming: returns the full response text."""
+    if LLM_PROVIDER == "groq":
+        from groq import AsyncGroq
+        client = AsyncGroq(api_key=GROQ_API_KEY)
+        resp = await client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            timeout=timeout,
+        )
+        return resp.choices[0].message.content or ""
+    else:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            r = await client.post(
+                f"{OLLAMA_URL}/api/generate",
+                json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
+            )
+            return r.json().get("response", "")
+
+async def _llm_stream(prompt: str) -> AsyncGenerator[str, None]:
+    """Streaming: async generator that yields text chunks."""
+    if LLM_PROVIDER == "groq":
+        from groq import AsyncGroq
+        client = AsyncGroq(api_key=GROQ_API_KEY)
+        stream = await client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            stream=True,
+        )
+        async for chunk in stream:
+            text = chunk.choices[0].delta.content or ""
+            if text:
+                yield text
+    else:
+        async with httpx.AsyncClient(timeout=120) as client:
+            async with client.stream(
+                "POST", f"{OLLAMA_URL}/api/generate",
+                json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": True},
+            ) as r:
+                async for line in r.aiter_lines():
+                    if line:
+                        try:
+                            chunk = json.loads(line)
+                            if chunk.get("response"):
+                                yield chunk["response"]
+                        except Exception:
+                            pass
 
 app = FastAPI(title="VocabGraph API", version="1.0.0")
 
@@ -150,22 +210,26 @@ def rows_to_list(rows):
 # ── HEALTH ───────────────────────────────────────────────────
 @app.get("/api/health")
 async def health():
-    """Check API + Ollama status"""
-    ollama_ok = False
+    provider_ok = False
     models = []
-    try:
-        async with httpx.AsyncClient(timeout=3) as client:
-            r = await client.get(f"{OLLAMA_URL}/api/tags")
-            if r.status_code == 200:
-                ollama_ok = True
-                models = [m["name"] for m in r.json().get("models", [])]
-    except Exception:
-        pass
+    if LLM_PROVIDER == "groq":
+        provider_ok = bool(GROQ_API_KEY)
+        models = [GROQ_MODEL]
+    else:
+        try:
+            async with httpx.AsyncClient(timeout=3) as client:
+                r = await client.get(f"{OLLAMA_URL}/api/tags")
+                if r.status_code == 200:
+                    provider_ok = True
+                    models = [m["name"] for m in r.json().get("models", [])]
+        except Exception:
+            pass
     return {
-        "api":    "ok",
-        "ollama": ollama_ok,
-        "model":  OLLAMA_MODEL,
-        "models": models,
+        "api":      "ok",
+        "ollama":   provider_ok,
+        "provider": LLM_PROVIDER,
+        "model":    _active_model(),
+        "models":   models,
     }
 
 # ── NODES ────────────────────────────────────────────────────
@@ -291,7 +355,7 @@ def set_sim(word: str, body: dict):
         db.execute(
             """INSERT INTO sim_cache (word,results,model) VALUES (?,?,?)
                ON CONFLICT(word) DO UPDATE SET results=excluded.results, model=excluded.model""",
-            (word, json.dumps(results), OLLAMA_MODEL)
+            (word, json.dumps(results), _active_model())
         )
     return {"ok": True}
 
@@ -319,12 +383,8 @@ Categories:
 
 Reply with ONLY the single word: concept or phrase. No explanation."""
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.post(f"{OLLAMA_URL}/api/generate", json={
-                "model": OLLAMA_MODEL, "prompt": prompt, "stream": False
-            })
-            text = r.json().get("response", "").strip().lower()
-            cat = text if text in {"concept", "phrase"} else "concept"
+        text = (await _llm_generate(prompt, timeout=10)).strip().lower()
+        cat = text if text in {"concept", "phrase"} else "concept"
     except Exception:
         cat = "concept"
     return {"cat": cat}
@@ -342,7 +402,7 @@ def export_graph():
     return {
         "exported_at": datetime.utcnow().isoformat(),
         "version":     2,
-        "model":       OLLAMA_MODEL,
+        "model":       _active_model(),
         "nodes":       nodes,
         "links":       links,
     }
@@ -461,20 +521,8 @@ Keep everything simple, clear, and useful for a systems engineer learning Englis
 
     async def generate():
         try:
-            async with httpx.AsyncClient(timeout=120) as client:
-                async with client.stream(
-                    "POST",
-                    f"{OLLAMA_URL}/api/generate",
-                    json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": True},
-                ) as r:
-                    async for line in r.aiter_lines():
-                        if line:
-                            try:
-                                chunk = json.loads(line)
-                                if chunk.get("response"):
-                                    yield chunk["response"]
-                            except Exception:
-                                pass
+            async for chunk in _llm_stream(prompt):
+                yield chunk
         except Exception as e:
             yield f"\n\n[Error: {e}]"
 
@@ -511,13 +559,8 @@ Format:
 Only include nodes with score >= 0.5. Maximum 4 results."""
 
     try:
-        async with httpx.AsyncClient(timeout=60) as client:
-            r = await client.post(
-                f"{OLLAMA_URL}/api/generate",
-                json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
-            )
-            raw = r.json().get("response", "")
-            # extract JSON array robustly
+        raw = await _llm_generate(prompt, timeout=60)
+        # extract JSON array robustly
             start = raw.find("[")
             end   = raw.rfind("]")
             if start == -1 or end == -1:
@@ -552,13 +595,8 @@ Rules:
 - Do NOT add extra explanation. Output ONLY "CORRECT" or "CORRECTION: <text>"."""
 
     try:
-        async with httpx.AsyncClient(timeout=20) as client:
-            r = await client.post(
-                f"{OLLAMA_URL}/api/generate",
-                json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
-            )
-            raw = r.json().get("response", "").strip()
-            upper = raw.upper()
+        raw = (await _llm_generate(prompt, timeout=20)).strip()
+        upper = raw.upper()
             if upper.startswith("CORRECTION:"):
                 correction = raw[len("CORRECTION:"):].strip().strip('"\'')
                 changed = correction.lower() != word.lower()
@@ -574,13 +612,8 @@ async def visual_prompt(word: str):
     """Ask Qwen to produce a short visual scene description for Pollinations.ai"""
     prompt = f'In 10 words or less, describe a simple visual scene that helps remember the concept "{word}" in systems engineering. Only output the scene description, nothing else.'
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            r = await client.post(
-                f"{OLLAMA_URL}/api/generate",
-                json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
-            )
-            text = r.json().get("response", word).strip().replace("\n", " ")
-            return {"prompt": text}
+        text = (await _llm_generate(prompt, timeout=30)).strip().replace("\n", " ")
+        return {"prompt": text}
     except Exception:
         return {"prompt": word}
 
@@ -601,20 +634,8 @@ Keep it short, practical, and easy to understand."""
 
     async def generate():
         try:
-            async with httpx.AsyncClient(timeout=120) as client:
-                async with client.stream(
-                    "POST",
-                    f"{OLLAMA_URL}/api/generate",
-                    json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": True},
-                ) as r:
-                    async for line in r.aiter_lines():
-                        if line:
-                            try:
-                                chunk = json.loads(line)
-                                if chunk.get("response"):
-                                    yield chunk["response"]
-                            except Exception:
-                                pass
+            async for chunk in _llm_stream(prompt):
+                yield chunk
         except Exception as e:
             yield f"\n\n[Error: {e}]"
 
