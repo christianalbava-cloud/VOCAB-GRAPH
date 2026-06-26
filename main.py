@@ -561,19 +561,18 @@ Only include nodes with score >= 0.5. Maximum 4 results."""
     try:
         raw = await _llm_generate(prompt, timeout=60)
         # extract JSON array robustly
-            start = raw.find("[")
-            end   = raw.rfind("]")
-            if start == -1 or end == -1:
-                return {"results": []}
-            arr = json.loads(raw[start:end+1])
-            # validate
-            results = [
-                {"word": a["word"], "score": float(a["score"]), "reason": a.get("reason","")}
-                for a in arr
-                if isinstance(a, dict) and "word" in a and float(a.get("score",0)) >= 0.5
-                and a["word"] in existing
-            ]
-            return {"results": results}
+        start = raw.find("[")
+        end   = raw.rfind("]")
+        if start == -1 or end == -1:
+            return {"results": []}
+        arr = json.loads(raw[start:end+1])
+        results = [
+            {"word": a["word"], "score": float(a["score"]), "reason": a.get("reason","")}
+            for a in arr
+            if isinstance(a, dict) and "word" in a and float(a.get("score",0)) >= 0.5
+            and a["word"] in existing
+        ]
+        return {"results": results}
     except Exception as e:
         print(f"[Similarity error] {e}")
         return {"results": []}
@@ -597,12 +596,11 @@ Rules:
     try:
         raw = (await _llm_generate(prompt, timeout=20)).strip()
         upper = raw.upper()
-            if upper.startswith("CORRECTION:"):
-                correction = raw[len("CORRECTION:"):].strip().strip('"\'')
-                changed = correction.lower() != word.lower()
-                return {"changed": changed, "correction": correction if changed else word}
-            # anything else (CORRECT or unexpected) → no change
-            return {"changed": False, "correction": word}
+        if upper.startswith("CORRECTION:"):
+            correction = raw[len("CORRECTION:"):].strip().strip('"\'')
+            changed = correction.lower() != word.lower()
+            return {"changed": changed, "correction": correction if changed else word}
+        return {"changed": False, "correction": word}
     except Exception:
         return {"changed": False, "correction": word}
 
