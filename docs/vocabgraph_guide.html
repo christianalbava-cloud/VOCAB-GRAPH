@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>VocabGraph — Guía Completa</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',sans-serif;font-size:13px;color:#1a1a2e;background:#fff;line-height:1.7}
+  .page{max-width:800px;margin:0 auto;padding:40px 50px}
+  h1{font-size:32px;color:#0d1117;letter-spacing:-1px;margin-bottom:4px}
+  h1 span{color:#58a6ff}
+  .subtitle{font-size:14px;color:#6e7681;margin-bottom:40px}
+  h2{font-size:18px;color:#0d1117;border-left:4px solid #58a6ff;padding-left:12px;margin:36px 0 12px}
+  h3{font-size:13px;font-weight:700;color:#58a6ff;text-transform:uppercase;letter-spacing:1px;margin:20px 0 6px}
+  p{margin-bottom:10px;color:#24292f}
+  ul,ol{margin:8px 0 12px 20px;color:#24292f}
+  li{margin-bottom:4px}
+  table{width:100%;border-collapse:collapse;margin:12px 0 20px;font-size:12px}
+  th{background:#f6f8fa;color:#24292f;font-weight:600;padding:8px 12px;text-align:left;border:1px solid #d0d7de}
+  td{padding:7px 12px;border:1px solid #d0d7de;vertical-align:top}
+  td:first-child{font-weight:600;white-space:nowrap}
+  .tag{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;margin:2px}
+  .tag-blue{background:#ddf4ff;color:#0969da}
+  .tag-green{background:#dafbe1;color:#1a7f37}
+  .tag-purple{background:#fbefff;color:#8250df}
+  .note{background:#f6f8fa;border:1px solid #d0d7de;border-left:4px solid #58a6ff;padding:10px 14px;border-radius:4px;margin:12px 0;font-size:12px;color:#57606a}
+  .warn{background:#fff8c5;border:1px solid #d4a72c;border-left:4px solid #d4a72c;padding:10px 14px;border-radius:4px;margin:12px 0;font-size:12px;color:#633c01}
+  .flow{display:flex;flex-direction:column;gap:0;margin:16px 0}
+  .flow-step{display:flex;align-items:flex-start;gap:14px;padding:10px 0}
+  .flow-num{width:28px;height:28px;border-radius:50%;background:#58a6ff;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+  .flow-content h4{font-size:13px;font-weight:700;color:#0d1117;margin-bottom:2px}
+  .flow-connector{width:28px;border-left:2px dashed #d0d7de;margin-left:14px;height:12px}
+  .score-bar{display:inline-block;height:8px;border-radius:4px;vertical-align:middle;margin-right:6px}
+  .toc{background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;padding:16px 20px;margin:24px 0}
+  .toc h3{margin-top:0;margin-bottom:10px}
+  .toc ol{margin-left:16px}
+  .toc li{margin-bottom:3px;color:#0969da;cursor:pointer}
+  .divider{border:none;border-top:1px solid #d0d7de;margin:32px 0}
+  .header-block{background:linear-gradient(135deg,#0d1117 0%,#161b22 100%);color:#fff;padding:40px 50px;margin-bottom:0}
+  .header-block h1{color:#fff}
+  .header-block h1 span{color:#58a6ff}
+  .header-block .subtitle{color:#8b949e}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:12px 0}
+  code{background:#f6f8fa;border:1px solid #d0d7de;border-radius:4px;padding:1px 6px;font-family:monospace;font-size:12px;color:#cf222e}
+  .example-box{background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;padding:12px 16px;margin:8px 0;font-size:12px}
+  .example-box .label{font-weight:700;color:#57606a;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+  .hl{background:#fff3b0;padding:0 2px;border-radius:2px}
+  .chip{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;margin:2px;font-weight:600}
+  .chip-blue{background:#ddf4ff;color:#0969da;border:1px solid #b6d4fb}
+  .chip-green{background:#dafbe1;color:#1a7f37;border:1px solid #aadec6}
+  .chip-purple{background:#fbefff;color:#8250df;border:1px solid #d8b4fe}
+
+  @media print{
+    .page{padding:20px 30px;max-width:100%}
+    .header-block{padding:24px 30px}
+    h2{page-break-after:avoid}
+    .flow-step{page-break-inside:avoid}
+    table{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+<div class="header-block">
+  <div class="page" style="padding-top:0;padding-bottom:0">
+    <h1>Vocab<span>Graph</span></h1>
+    <p class="subtitle" style="margin-top:8px;font-size:16px">Guía completa del sistema — Para imprimir como PDF usa Ctrl+P → Guardar como PDF</p>
+    <p class="subtitle">Herramienta de aprendizaje de inglés técnico con grafo interactivo e IA integrada</p>
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="toc">
+    <h3>Contenido</h3>
+    <ol>
+      <li>¿Qué es VocabGraph?</li>
+      <li>Flujo completo al agregar una palabra</li>
+      <li>El prompt de stream_card — cómo trabaja la IA</li>
+      <li>Los tabs de cada palabra</li>
+      <li>Tenses — tiempos verbales</li>
+      <li>Categorías: Concept, Phrase, Composed</li>
+      <li>Semantic Connections vs Semantic Similarity</li>
+      <li>Scores y tipos de enlace</li>
+      <li>Weight (peso del nodo)</li>
+      <li>El modelo Ollama y Groq</li>
+      <li>Export e Import</li>
+      <li>Vista 3D</li>
+      <li>Re-search (↻)</li>
+    </ol>
+  </div>
+
+  <!-- ─── 1 ─── -->
+  <h2>1. ¿Qué es VocabGraph?</h2>
+  <p>VocabGraph es una herramienta personal para aprender inglés técnico donde cada palabra que agregas se convierte en un <strong>nodo de un grafo interactivo</strong>. El modelo de IA genera automáticamente una ficha de aprendizaje completa y dibuja conexiones hacia otras palabras que ya conoces, basándose en similitud semántica.</p>
+  <p>Con el tiempo, el grafo refleja tu vocabulario real. Las palabras de rendimiento de red (<em>latency, throughput, bottleneck</em>) se agrupan naturalmente. Las expresiones de reuniones (<em>moving forward, loop me in, touch base</em>) forman otro cluster. Esa estructura visual te enseña el vocabulario como una red de conceptos, no como una lista.</p>
+  <div class="note">Diseñado específicamente para ingenieros de sistemas hispanohablantes que aprenden inglés en un contexto de trabajo técnico.</div>
+
+  <hr class="divider">
+
+  <!-- ─── 2 ─── -->
+  <h2>2. Flujo completo al agregar una palabra</h2>
+
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-num">1</div>
+      <div class="flow-content">
+        <h4>Verificación ortográfica</h4>
+        <p>El modelo recibe la palabra y responde <code>CORRECT</code> o <code>CORRECTION: &lt;versión corregida&gt;</code>. No toca siglas ni nombres propios. Ejemplo: <em>"idempotant"</em> → <em>"idempotent"</em>.</p>
+      </div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <div class="flow-num">2</div>
+      <div class="flow-content">
+        <h4>Se guarda el nodo</h4>
+        <p>La palabra se guarda inmediatamente en SQLite con su categoría, notas y peso inicial de 0. Aparece en el grafo 2D y 3D antes de que el modelo genere nada.</p>
+      </div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <div class="flow-num">3</div>
+      <div class="flow-content">
+        <h4>Stream de la tarjeta de aprendizaje</h4>
+        <p>El modelo genera la ficha en tiempo real (letra por letra). Incluye 5 secciones con formato estricto: DEFINITION, EXAMPLES, HOW TO SPEAK, IDEAS TO REMEMBER, RELATED WORDS.</p>
+      </div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <div class="flow-num">4</div>
+      <div class="flow-content">
+        <h4>Creación de nodos desde Related Words</h4>
+        <p>Al terminar el streaming, el sistema lee las 5 palabras de la sección RELATED WORDS. Cada una que no existe en el grafo se crea automáticamente con un enlace débil de score <code>0.5</code>. Son <strong>marcadores de posición</strong> — no tienen tarjeta propia hasta que los selecciones.</p>
+        <div class="example-box">
+          <div class="label">Ejemplo</div>
+          Agregas <em>"back and forth"</em> → el modelo sugiere: data exchange, bidirectional communication, two-way communication, iteration, alternation → aparecen 5 nodos nuevos en el grafo.
+        </div>
+      </div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <div class="flow-num">5</div>
+      <div class="flow-content">
+        <h4>Similitud semántica (proceso paralelo)</h4>
+        <p>Al mismo tiempo que corre el streaming, el backend envía al modelo la lista de hasta 40 nodos existentes y le pregunta cuáles son más cercanos a la nueva palabra. Los que superen <code>0.5</code> se convierten en enlaces en el grafo.</p>
+        <div class="warn">Los nodos creados en el paso 4 (Related Words) NO son considerados aquí, porque la llamada de similitud se envió antes de que el streaming terminara.</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ─── 3 ─── -->
+  <h2>3. El prompt de stream_card — cómo trabaja la IA</h2>
+  <p>El prompt le establece al modelo tres cosas antes de pedir contenido:</p>
+  <ul>
+    <li><strong>Quién eres:</strong> ingeniero de sistemas hispanohablante aprendiendo inglés</li>
+    <li><strong>Qué tipo de elemento es:</strong> concept, phrase o composed (ajusta el tono y los ejemplos)</li>
+    <li><strong>Notas opcionales:</strong> contexto que escribiste al agregar la palabra</li>
+  </ul>
+  <p>Con esa información genera cinco secciones en formato exacto:</p>
+  <table>
+    <tr><th>Sección</th><th>Contenido</th><th>Formato requerido</th></tr>
+    <tr><td>DEFINITION</td><td>2-3 oraciones simples</td><td>Texto libre</td></tr>
+    <tr><td>EXAMPLES</td><td>3 frases contextualizadas</td><td>[Systems Engineering], [General English], [Conversation] + &lt;&lt;palabra&gt;&gt;</td></tr>
+    <tr><td>HOW TO SPEAK</td><td>3 frases para reuniones</td><td>Cada una empieza con ▸</td></tr>
+    <tr><td>IDEAS TO REMEMBER</td><td>3 trucos mnemotécnicos</td><td>Cada una empieza con 💡</td></tr>
+    <tr><td>RELATED WORDS</td><td>5 palabras separadas por coma</td><td>Una sola línea</td></tr>
+  </table>
+  <div class="note">El formato es estricto porque el frontend usa expresiones regulares para extraer cada sección. El parser tiene bandera case-insensitive para tolerar variaciones del modelo.</div>
+
+  <hr class="divider">
+
+  <!-- ─── 4 ─── -->
+  <h2>4. Los tabs de cada palabra</h2>
+
+  <h3>📖 Learn</h3>
+  <p>Definición y los tres ejemplos con sus etiquetas. La palabra aparece resaltada dentro de las frases (el modelo la rodea con &lt;&lt;doble chevron&gt;&gt; y el frontend los convierte en marcadores visuales).</p>
+
+  <h3>🗣 Speak</h3>
+  <p>Tres frases concretas listas para decir en reuniones. No son definiciones — son oraciones que tú podrías pronunciar en contexto laboral.</p>
+  <div class="example-box">
+    <div class="label">Ejemplo para "bottleneck"</div>
+    ▸ The database is the bottleneck in our current architecture<br>
+    ▸ We need to identify the bottleneck before we scale horizontally<br>
+    ▸ The API gateway is becoming a bottleneck under high load
+  </div>
+
+  <h3>💡 Ideas</h3>
+  <p>Tres trucos mnemotécnicos, analogías o historias cortas. El modelo usa conceptos de ingeniería porque sabe quién eres.</p>
+  <div class="example-box">
+    <div class="label">Ejemplo para "idempotent"</div>
+    💡 Think of a light switch: pressing it when it's already ON does nothing extra — same result every time<br>
+    💡 In HTTP, DELETE is idempotent: deleting a resource that's already gone still returns the same state<br>
+    💡 "Idem" (mismo en latín) + "potent" (poder). Mismo poder, mismo resultado, siempre
+  </div>
+
+  <h3>🔗 Similar</h3>
+  <p>Ranking de palabras del grafo más cercanas semánticamente. Se genera bajo demanda y se cachea en memoria. Ver sección 7 para la diferencia con Semantic Connections.</p>
+
+  <hr class="divider">
+
+  <!-- ─── 5 ─── -->
+  <h2>5. Tenses — tiempos verbales</h2>
+  <p>El prompt de Tenses tiene una decisión inicial: primero determina si la palabra es un verbo o no.</p>
+
+  <div class="two-col">
+    <div>
+      <h3>Si NO es verbo</h3>
+      <p>Genera una sola sección <code>## NOT A VERB</code> explicando la parte del discurso y formas relevantes.</p>
+      <ul>
+        <li><em>latency</em> → sustantivo, plural: latencies</li>
+        <li><em>idempotent</em> → adjetivo</li>
+        <li><em>back and forth</em> → frase adverbial</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Si ES verbo</h3>
+      <p>Genera 7 secciones con conjugación y 3 ejemplos en contexto de ingeniería cada una.</p>
+      <ul>
+        <li>INFINITIVE</li>
+        <li>PRESENT SIMPLE</li>
+        <li>PRESENT CONTINUOUS</li>
+        <li>PAST SIMPLE</li>
+        <li>PAST PARTICIPLE</li>
+        <li>FUTURE SIMPLE</li>
+        <li>PRESENT PERFECT</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note"><strong>Caché:</strong> Tenses se genera la primera vez que abres el tab, se guarda en memoria (no en la base de datos). Si recargas el navegador se regenera. Si presionas ↻ el caché se borra.</div>
+
+  <hr class="divider">
+
+  <!-- ─── 6 ─── -->
+  <h2>6. Categorías: Concept, Phrase, Composed</h2>
+  <table>
+    <tr><th>Categoría</th><th>Color</th><th>Qué es</th><th>Ejemplos</th></tr>
+    <tr>
+      <td><span class="chip chip-blue">Concept</span></td>
+      <td>Azul</td>
+      <td>Idea técnica o abstracta, generalmente una palabra</td>
+      <td>latency, idempotent, bottleneck, deadlock, scalability</td>
+    </tr>
+    <tr>
+      <td><span class="chip chip-green">Phrase</span></td>
+      <td>Verde</td>
+      <td>Expresión fija de varias palabras del idioma inglés. El significado no siempre es deducible de las palabras individuales</td>
+      <td>moving forward, touch base, loop me in, back and forth, circle back</td>
+    </tr>
+    <tr>
+      <td><span class="chip chip-purple">Composed</span></td>
+      <td>Morado</td>
+      <td>Expresión construida por ti usando el Phrase Builder — combinas nodos existentes y la IA los analiza juntos</td>
+      <td>idempotent retry loop, low-latency peer exchange</td>
+    </tr>
+  </table>
+  <div class="note"><strong>Diferencia clave Phrase vs Composed:</strong> Phrase es una expresión que encontraste en inglés (la importas). Composed es una combinación que armaste desde tu vocabulario (la ensamblas).</div>
+
+  <hr class="divider">
+
+  <!-- ─── 7 ─── -->
+  <h2>7. Semantic Connections vs Semantic Similarity</h2>
+
+  <h3>Semantic Connections — las líneas del grafo</h3>
+  <p>Son los <strong>enlaces guardados en la base de datos</strong>, representados como líneas entre nodos. Persisten entre sesiones. Se crean de tres formas:</p>
+  <ol>
+    <li>Durante la similitud semántica al agregar una palabra (score ≥ 0.5)</li>
+    <li>Desde la sección Related Words (score fijo de 0.5)</li>
+    <li>Manualmente via Phrase Builder</li>
+  </ol>
+
+  <h3>Semantic Similarity — el cálculo activo</h3>
+  <p>Es una <strong>consulta nueva al modelo</strong> en el momento en que la pides. Compara la palabra seleccionada contra todos los nodos actuales del grafo y devuelve un ranking fresco.</p>
+
+  <div class="example-box">
+    <div class="label">Ejemplo comparativo</div>
+    Agregas <em>"bottleneck"</em> cuando tienes 10 palabras → la similitud crea 2 líneas → esas son las <strong>Connections</strong>.<br><br>
+    Tres semanas después abres el tab Similar con 60 palabras → el modelo encuentra 4 palabras muy relevantes que no existían antes → eso es <strong>Similarity</strong>, un cálculo nuevo. Esas 4 no tienen línea todavía.
+  </div>
+
+  <hr class="divider">
+
+  <!-- ─── 8 ─── -->
+  <h2>8. Scores y tipos de enlace</h2>
+  <table>
+    <tr><th>Score</th><th>Significado</th><th>Enlace en el grafo</th></tr>
+    <tr><td>≥ 0.75</td><td>Relación fuerte — casi sinónimos en contexto</td><td>Línea gruesa verde</td></tr>
+    <tr><td>0.50 – 0.74</td><td>Mismo vecindario conceptual</td><td>Línea delgada gris</td></tr>
+    <tr><td>0.50 fijo</td><td>Nodo creado desde Related Words</td><td>Línea delgada gris</td></tr>
+    <tr><td>&lt; 0.50</td><td>Poca relación semántica</td><td>Sin enlace</td></tr>
+  </table>
+  <div class="example-box">
+    <div class="label">Ejemplos reales de scores</div>
+    deadlock ↔ race condition → <strong>0.82</strong> (ambas son errores de concurrencia)<br>
+    bandwidth ↔ throughput → <strong>0.80</strong> (métricas del mismo sistema)<br>
+    latency ↔ throughput → <strong>0.72</strong> (rendimiento de red, no lo mismo)<br>
+    back and forth ↔ moving forward → <strong>~0.15</strong> (sin relación semántica real)
+  </div>
+
+  <hr class="divider">
+
+  <!-- ─── 9 ─── -->
+  <h2>9. Weight — Peso del nodo</h2>
+  <p>Cada vez que seleccionas una palabra su peso aumenta en 1. El peso refleja con qué frecuencia has revisado esa palabra.</p>
+  <ul>
+    <li>En la <strong>vista 3D</strong>, el tamaño del nodo es proporcional al peso</li>
+    <li>No afecta la lógica de similitud ni los enlaces</li>
+    <li>Es un indicador visual de tu historial de estudio</li>
+  </ul>
+  <div class="note">Nodos grandes = revisas con frecuencia, probablemente los dominas. Nodos pequeños = los ignoraste desde que los creaste, vale la pena revisarlos.</div>
+
+  <hr class="divider">
+
+  <!-- ─── 10 ─── -->
+  <h2>10. El modelo Ollama y Groq</h2>
+  <div class="two-col">
+    <div>
+      <h3>Ollama (local)</h3>
+      <ul>
+        <li>Modelo: <code>qwen2.5-coder:7b</code></li>
+        <li>7 mil millones de parámetros</li>
+        <li>~4-5 GB de RAM</li>
+        <li>Sin internet, sin límites</li>
+        <li>Más lento (15-30 seg por tarjeta)</li>
+        <li>Privado — nada sale de tu máquina</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Groq (nube)</h3>
+      <ul>
+        <li>Modelo: <code>llama-3.3-70b-versatile</code></li>
+        <li>70 mil millones de parámetros</li>
+        <li>Requiere clave de API</li>
+        <li>Muy rápido (2-3 seg por tarjeta)</li>
+        <li>Free tier: 14,400 req/día</li>
+        <li>Mejor calidad de respuestas</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note">Se cambia entre proveedores con la variable de entorno <code>LLM_PROVIDER=ollama</code> o <code>LLM_PROVIDER=groq</code>. No hay diferencia en la interfaz.</div>
+
+  <hr class="divider">
+
+  <!-- ─── 11 ─── -->
+  <h2>11. Export e Import</h2>
+  <table>
+    <tr><th>Acción</th><th>Qué hace</th><th>Cuándo usarlo</th></tr>
+    <tr><td>Export</td><td>Descarga JSON completo: nodos, enlaces, tarjetas guardadas, peso de cada nodo</td><td>Respaldo periódico, migrar a otra máquina, compartir grafo</td></tr>
+    <tr><td>Import Merge</td><td>Agrega solo lo que no existe. Respeta lo que tienes</td><td>Restaurar palabras borradas, combinar grafos</td></tr>
+    <tr><td>Import Replace</td><td>Borra todo y reemplaza con el archivo</td><td>Restauración completa desde respaldo</td></tr>
+  </table>
+  <div class="note">Las tarjetas de aprendizaje guardadas se importan también — no necesitas regenerarlas si estaban en el archivo exportado.</div>
+
+  <hr class="divider">
+
+  <!-- ─── 12 ─── -->
+  <h2>12. Vista 3D</h2>
+  <p>Renderiza el mismo grafo en tres dimensiones usando Three.js y 3D Force Graph. Los nodos se agrupan por categoría en el espacio: Concepts a un lado, Phrases al otro, Composed abajo.</p>
+  <table>
+    <tr><th>Diferencias con 2D</th><th>Lo que comparte con 2D</th></tr>
+    <tr>
+      <td>
+        <ul>
+          <li>Nodos agrupados en el espacio 3D por categoría</li>
+          <li>Tamaño proporcional al weight</li>
+          <li>Rotación automática con el mouse</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li>Panel de detalle con todos los tabs</li>
+          <li>Filtros por categoría (Concept / Phrase / Composed)</li>
+          <li>Botón 🔊 para pronunciación</li>
+          <li>Botón ↻ para regenerar</li>
+        </ul>
+      </td>
+    </tr>
+  </table>
+
+  <hr class="divider">
+
+  <!-- ─── 13 ─── -->
+  <h2>13. Re-search (↻)</h2>
+  <p>El botón de regenerar hace tres cosas en orden:</p>
+  <ol>
+    <li><strong>Borra la tarjeta guardada</strong> — elimina el texto del modelo de memoria y de la base de datos (<code>ai_cache</code>)</li>
+    <li><strong>Borra el caché de similitud y tenses</strong></li>
+    <li><strong>Vuelve a ejecutar el flujo completo</strong> — nueva tarjeta, nuevas Related Words, nueva similitud</li>
+  </ol>
+  <div class="note"><strong>Ventaja de hacer re-search:</strong> en la segunda pasada el grafo tiene más nodos (incluyendo los de Related Words de la primera vez), así que la similitud semántica los considera y puede encontrar más conexiones relevantes.</div>
+
+  <hr class="divider">
+
+  <p style="text-align:center;color:#8b949e;font-size:11px;margin-top:32px">
+    VocabGraph · FastAPI + SQLite + D3.js + Three.js · Ollama (qwen2.5-coder:7b) · Groq (llama-3.3-70b-versatile)
+  </p>
+
+</div>
+</body>
+</html>

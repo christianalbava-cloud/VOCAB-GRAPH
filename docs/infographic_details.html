@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>VocabGraph — El Universo del Sistema</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1280px;height:800px;overflow:hidden;background:#000014}
+#stars{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.nebula{position:fixed;border-radius:50%;filter:blur(90px);opacity:.14;pointer-events:none;z-index:0}
+.nb1{width:700px;height:500px;background:radial-gradient(circle,#2d0057,transparent);top:-200px;right:-100px}
+.nb2{width:600px;height:400px;background:radial-gradient(circle,#001a4d,transparent);bottom:-150px;left:-100px}
+.nb3{width:350px;height:350px;background:radial-gradient(circle,#3d0020,transparent);top:300px;right:400px}
+
+.container{position:relative;z-index:2;width:1280px;height:800px;display:grid;grid-template-rows:auto 1fr auto;padding:20px 32px 14px}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.logo{font-family:'Orbitron',monospace;font-size:26px;font-weight:900;color:#FFE81F;text-shadow:0 0 24px #FFE81F88;letter-spacing:5px}
+.logo span{color:#4FC3F7;text-shadow:0 0 24px #4FC3F788}
+.header-right{text-align:right}
+.header-sub{font-family:'Exo 2',sans-serif;font-size:11px;color:#8899bb;letter-spacing:2px;text-transform:uppercase}
+.divider-line{height:1px;background:linear-gradient(90deg,transparent,#FFE81F66,#4FC3F766,transparent);margin-bottom:14px}
+
+/* GRID */
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;gap:10px;height:100%}
+
+/* PANELS */
+.panel{background:rgba(0,8,30,.7);border:1px solid rgba(79,195,247,.2);border-radius:8px;padding:12px 14px;backdrop-filter:blur(4px);position:relative;overflow:hidden}
+.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.panel.yellow::before{background:linear-gradient(90deg,transparent,#FFE81F,transparent)}
+.panel.blue::before{background:linear-gradient(90deg,transparent,#4FC3F7,transparent)}
+.panel.purple::before{background:linear-gradient(90deg,transparent,#d2a8ff,transparent)}
+.panel.green::before{background:linear-gradient(90deg,transparent,#3fb950,transparent)}
+.panel.orange::before{background:linear-gradient(90deg,transparent,#f78166,transparent)}
+
+.ptitle{font-family:'Orbitron',monospace;font-size:9px;font-weight:700;color:#4FC3F7;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;gap:6px}
+.ptitle.yellow{color:#FFE81F;text-shadow:0 0 12px #FFE81F66}
+.ptitle::after{content:'';flex:1;height:1px;background:rgba(79,195,247,.2)}
+.ptitle.yellow::after{background:rgba(255,232,31,.2)}
+
+/* CATEGORÍAS */
+.cat-row{display:flex;gap:8px;margin-bottom:8px}
+.cat-box{flex:1;padding:8px 10px;border-radius:6px;text-align:center}
+.cat-box.concept{background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.3)}
+.cat-box.phrase{background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3)}
+.cat-box.composed{background:rgba(210,168,255,.1);border:1px solid rgba(210,168,255,.3)}
+.cat-name{font-family:'Orbitron',monospace;font-size:10px;font-weight:700;display:block;margin-bottom:4px}
+.cat-name.c{color:#58a6ff;text-shadow:0 0 10px #58a6ff66}
+.cat-name.p{color:#3fb950;text-shadow:0 0 10px #3fb95066}
+.cat-name.m{color:#d2a8ff;text-shadow:0 0 10px #d2a8ff66}
+.cat-desc{font-family:'Exo 2',sans-serif;font-size:10px;color:#8899bb;line-height:1.4}
+.cat-ex{font-family:'Exo 2',sans-serif;font-size:9px;color:#6a7a90;margin-top:4px;font-style:italic}
+
+/* TABS */
+.tab-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.tab-item{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:6px;padding:7px 9px}
+.tab-icon{font-size:14px;display:block;margin-bottom:3px}
+.tab-name{font-family:'Exo 2',sans-serif;font-size:11px;font-weight:700;color:#fff;display:block;margin-bottom:2px}
+.tab-desc{font-family:'Exo 2',sans-serif;font-size:10px;color:#8899bb;line-height:1.35}
+.tab-item.wide{grid-column:span 2}
+
+/* SCORES */
+.score-item{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.score-bar{height:10px;border-radius:5px;flex-shrink:0}
+.score-strong{width:60px;background:linear-gradient(90deg,#3fb950,#58d77a);box-shadow:0 0 8px #3fb95066}
+.score-med{width:40px;background:linear-gradient(90deg,#6e7681,#8b949e)}
+.score-weak{width:24px;background:rgba(110,118,129,.3);border:1px dashed #6e7681}
+.score-val{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:#FFE81F;min-width:50px}
+.score-desc{font-family:'Exo 2',sans-serif;font-size:10.5px;color:#aab8cc}
+.score-tag{font-family:'Exo 2',sans-serif;font-size:9px;color:#6e7681;margin-top:1px}
+
+/* CONNECTIONS vs SIMILARITY */
+.vs-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;height:calc(100% - 28px)}
+.vs-col{background:rgba(255,255,255,.03);border-radius:6px;padding:9px 10px;height:100%}
+.vs-title{font-family:'Orbitron',monospace;font-size:9px;font-weight:700;margin-bottom:6px}
+.vs-title.blue{color:#4FC3F7;text-shadow:0 0 10px #4FC3F766}
+.vs-title.yellow{color:#FFE81F;text-shadow:0 0 10px #FFE81F66}
+.vs-text{font-family:'Exo 2',sans-serif;font-size:10px;color:#8899bb;line-height:1.5}
+.vs-sep{font-family:'Orbitron',monospace;font-size:14px;color:#4a5568;font-weight:700;text-align:center}
+.vs-tag{display:inline-block;padding:2px 7px;border-radius:12px;font-family:'Exo 2',sans-serif;font-size:9px;font-weight:600;margin-top:6px}
+.vs-tag.stored{background:rgba(79,195,247,.1);border:1px solid rgba(79,195,247,.3);color:#4FC3F7}
+.vs-tag.live{background:rgba(255,232,31,.1);border:1px solid rgba(255,232,31,.3);color:#FFE81F}
+
+/* EXTRAS */
+.extra-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;height:calc(100% - 28px)}
+.extra-item{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:8px 10px}
+.extra-icon{font-size:18px;display:block;margin-bottom:3px}
+.extra-name{font-family:'Exo 2',sans-serif;font-size:11px;font-weight:700;color:#FFE81F;display:block;margin-bottom:2px}
+.extra-desc{font-family:'Exo 2',sans-serif;font-size:10px;color:#8899bb;line-height:1.4}
+
+/* WEIGHT */
+.weight-viz{display:flex;align-items:flex-end;gap:6px;margin-top:8px;height:50px}
+.wbar{border-radius:4px 4px 0 0;background:linear-gradient(180deg,#4FC3F7,rgba(79,195,247,.3))}
+.wlabel{font-family:'Exo 2',sans-serif;font-size:9px;color:#8899bb;text-align:center;margin-top:4px}
+.wnode{width:30px;text-align:center}
+
+/* OLLAMA vs GROQ */
+.og-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;height:calc(100% - 28px)}
+.og-box{border-radius:6px;padding:9px 10px}
+.og-box.ollama{background:rgba(63,185,80,.07);border:1px solid rgba(63,185,80,.25)}
+.og-box.groq{background:rgba(88,166,255,.07);border:1px solid rgba(88,166,255,.25)}
+.og-name{font-family:'Orbitron',monospace;font-size:10px;font-weight:700;margin-bottom:6px}
+.og-name.o{color:#3fb950;text-shadow:0 0 10px #3fb95066}
+.og-name.g{color:#58a6ff;text-shadow:0 0 10px #58a6ff66}
+.og-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;font-family:'Exo 2',sans-serif;font-size:10px;color:#8899bb}
+.og-dot{width:5px;height:5px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.og-dot.g{background:#3fb950}
+.og-dot.b{background:#58a6ff}
+
+/* EXPORT */
+.exp-row{display:flex;gap:7px;margin-bottom:6px}
+.exp-box{flex:1;padding:7px 8px;border-radius:5px;text-align:center}
+.exp-box.export{background:rgba(255,232,31,.07);border:1px solid rgba(255,232,31,.25)}
+.exp-box.merge{background:rgba(63,185,80,.07);border:1px solid rgba(63,185,80,.25)}
+.exp-box.replace{background:rgba(247,129,102,.07);border:1px solid rgba(247,129,102,.25)}
+.exp-icon{font-size:16px;display:block;margin-bottom:3px}
+.exp-name{font-family:'Orbitron',monospace;font-size:8px;font-weight:700;display:block;margin-bottom:2px}
+.exp-name.y{color:#FFE81F}
+.exp-name.g{color:#3fb950}
+.exp-name.r{color:#f78166}
+.exp-desc{font-family:'Exo 2',sans-serif;font-size:9.5px;color:#8899bb;line-height:1.35}
+
+/* FOOTER */
+.footer{margin-top:10px}
+.crawl{font-family:'Exo 2',sans-serif;font-size:10px;color:#FFE81F66;text-align:center;letter-spacing:2px;text-transform:uppercase;border-top:1px solid rgba(255,255,255,.05);padding-top:8px}
+
+/* SPAN utils */
+.span2h{grid-column:span 2}
+.span2v{grid-row:span 2}
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+<div class="nebula nb1"></div>
+<div class="nebula nb2"></div>
+<div class="nebula nb3"></div>
+
+<div class="container">
+
+  <div>
+    <div class="header">
+      <div class="logo">Vocab<span>Graph</span> <span style="font-size:14px;color:#8899bb;letter-spacing:2px">— El Universo del Sistema</span></div>
+      <div class="header-right">
+        <div class="header-sub">Referencia rápida · Todas las funcionalidades</div>
+      </div>
+    </div>
+    <div class="divider-line"></div>
+  </div>
+
+  <!-- GRID 4×3 -->
+  <div class="grid">
+
+    <!-- ROW 1: CATEGORÍAS (span 2 cols) + SCORES + WEIGHT -->
+    <div class="panel yellow span2h" style="grid-column:span 2">
+      <div class="ptitle yellow">Categorías de palabras</div>
+      <div class="cat-row">
+        <div class="cat-box concept">
+          <span class="cat-name c">● Concept</span>
+          <div class="cat-desc">Idea técnica o abstracta. Generalmente una sola palabra.</div>
+          <div class="cat-ex">latency · idempotent · deadlock · bottleneck · scalability</div>
+        </div>
+        <div class="cat-box phrase">
+          <span class="cat-name p">● Phrase</span>
+          <div class="cat-desc">Expresión fija del idioma. El significado no se deduce de las palabras individuales.</div>
+          <div class="cat-ex">moving forward · touch base · back and forth · loop me in</div>
+        </div>
+        <div class="cat-box composed">
+          <span class="cat-name m">● Composed</span>
+          <div class="cat-desc">Combinación construida con Phrase Builder desde nodos existentes del grafo.</div>
+          <div class="cat-ex">idempotent retry loop · low-latency peer exchange</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel blue">
+      <div class="ptitle">Score · Tipo de enlace</div>
+      <div class="score-item">
+        <div class="score-bar score-strong"></div>
+        <div>
+          <div class="score-val">≥ 0.75</div>
+          <div class="score-desc">Relación fuerte</div>
+          <div class="score-tag">Línea gruesa verde</div>
+        </div>
+      </div>
+      <div class="score-item">
+        <div class="score-bar score-med"></div>
+        <div>
+          <div class="score-val">0.50–0.74</div>
+          <div class="score-desc">Mismo vecindario</div>
+          <div class="score-tag">Línea delgada gris</div>
+        </div>
+      </div>
+      <div class="score-item">
+        <div class="score-bar score-weak"></div>
+        <div>
+          <div class="score-val">&lt; 0.50</div>
+          <div class="score-desc">Sin relación</div>
+          <div class="score-tag">Sin enlace</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel purple">
+      <div class="ptitle" style="color:#d2a8ff">Weight — Peso</div>
+      <div style="font-family:'Exo 2',sans-serif;font-size:10.5px;color:#8899bb;line-height:1.5;margin-bottom:8px">
+        Sube en 1 cada vez que seleccionas una palabra. En 3D, el tamaño del nodo es proporcional al peso.
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:8px;height:44px;margin-top:4px">
+        <div style="text-align:center">
+          <div style="width:22px;height:12px;background:rgba(79,195,247,.25);border-radius:50%;margin:0 auto 3px;border:1px solid rgba(79,195,247,.3)"></div>
+          <div style="font-family:'Exo 2',sans-serif;font-size:8px;color:#6a7a90">×1</div>
+        </div>
+        <div style="text-align:center">
+          <div style="width:30px;height:20px;background:rgba(79,195,247,.35);border-radius:50%;margin:0 auto 3px;border:1px solid rgba(79,195,247,.4)"></div>
+          <div style="font-family:'Exo 2',sans-serif;font-size:8px;color:#6a7a90">×5</div>
+        </div>
+        <div style="text-align:center">
+          <div style="width:40px;height:32px;background:rgba(79,195,247,.5);border-radius:50%;margin:0 auto 3px;border:1px solid #4FC3F7;box-shadow:0 0 10px rgba(79,195,247,.3)"></div>
+          <div style="font-family:'Exo 2',sans-serif;font-size:8px;color:#4FC3F7">×15</div>
+        </div>
+        <div style="font-family:'Exo 2',sans-serif;font-size:10px;color:#8899bb;margin-left:6px;line-height:1.4">Más revisada = nodo más grande en 3D</div>
+      </div>
+    </div>
+
+    <!-- ROW 2: TABS (span 2) + CONNECTIONS vs SIM -->
+    <div class="panel green span2h" style="grid-column:span 2">
+      <div class="ptitle" style="color:#3fb950">Los 5 Tabs de cada palabra</div>
+      <div class="tab-grid">
+        <div class="tab-item">
+          <span class="tab-icon">📖</span>
+          <span class="tab-name">Learn</span>
+          <span class="tab-desc">Definición + 3 ejemplos con contexto. La palabra aparece resaltada con &lt;&lt;chevron&gt;&gt;.</span>
+        </div>
+        <div class="tab-item">
+          <span class="tab-icon">🗣</span>
+          <span class="tab-name">Speak</span>
+          <span class="tab-desc">3 frases listas para decir en reuniones. Oraciones completas, no definiciones.</span>
+        </div>
+        <div class="tab-item">
+          <span class="tab-icon">💡</span>
+          <span class="tab-name">Ideas</span>
+          <span class="tab-desc">3 trucos mnemotécnicos y analogías usando conceptos de ingeniería.</span>
+        </div>
+        <div class="tab-item">
+          <span class="tab-icon">⏱</span>
+          <span class="tab-name">Tenses</span>
+          <span class="tab-desc">7 tiempos verbales con 3 ejemplos cada uno. Si no es verbo, explica la parte del discurso.</span>
+        </div>
+        <div class="tab-item wide">
+          <span class="tab-icon" style="display:inline">🔗</span>
+          <span class="tab-name" style="display:inline;margin-left:4px">Similar</span>
+          <span class="tab-desc"> — Ranking de palabras del grafo más cercanas. Cálculo nuevo al modelo en tiempo real. Resultado cacheado en memoria.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel blue span2v" style="grid-row:span 2">
+      <div class="ptitle">Connections vs Similarity</div>
+      <div style="height:calc(100% - 28px);display:flex;flex-direction:column;gap:8px">
+        <div style="background:rgba(79,195,247,.07);border:1px solid rgba(79,195,247,.25);border-radius:6px;padding:10px">
+          <div style="font-family:'Orbitron',monospace;font-size:9px;font-weight:700;color:#4FC3F7;margin-bottom:5px;text-shadow:0 0 10px #4FC3F766">🔗 CONNECTIONS</div>
+          <div style="font-family:'Exo 2',sans-serif;font-size:10.5px;color:#8899bb;line-height:1.5">Líneas <strong style="color:#fff">guardadas en SQLite</strong>. Persisten entre sesiones. Se crean al agregar una palabra o desde Related Words.</div>
+          <div style="margin-top:6px;font-family:'Exo 2',sans-serif;font-size:9px;color:#4FC3F7;padding:4px 8px;background:rgba(79,195,247,.08);border-radius:4px">= Historial guardado del grafo</div>
+        </div>
+        <div style="background:rgba(255,232,31,.07);border:1px solid rgba(255,232,31,.25);border-radius:6px;padding:10px">
+          <div style="font-family:'Orbitron',monospace;font-size:9px;font-weight:700;color:#FFE81F;margin-bottom:5px;text-shadow:0 0 10px #FFE81F66">⚡ SIMILARITY</div>
+          <div style="font-family:'Exo 2',sans-serif;font-size:10.5px;color:#8899bb;line-height:1.5">Consulta <strong style="color:#fff">nueva al modelo</strong> en tiempo real. Compara contra todos los nodos actuales. No todas las similitudes se convierten en líneas.</div>
+          <div style="margin-top:6px;font-family:'Exo 2',sans-serif;font-size:9px;color:#FFE81F;padding:4px 8px;background:rgba(255,232,31,.08);border-radius:4px">= Cálculo fresco, resultado nuevo</div>
+        </div>
+        <div style="background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1);border-radius:6px;padding:8px">
+          <div style="font-family:'Exo 2',sans-serif;font-size:10px;color:#6a7a90;line-height:1.5">
+            <span style="color:#aab8cc">Ejemplo:</span> Agregas <em>"bottleneck"</em> con 10 nodos → Connections crea 2 líneas. Tres semanas después con 60 nodos → Similarity del tab encuentra 4 nuevas relaciones que no existen como líneas todavía.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 3: OLLAMA/GROQ + EXPORT + 3D + RE-SEARCH -->
+    <div class="panel green">
+      <div class="ptitle" style="color:#3fb950">Ollama vs Groq</div>
+      <div class="og-grid">
+        <div class="og-box ollama">
+          <div class="og-name o">OLLAMA</div>
+          <div class="og-row"><div class="og-dot g"></div>Local, sin internet</div>
+          <div class="og-row"><div class="og-dot g"></div>qwen2.5-coder:7b</div>
+          <div class="og-row"><div class="og-dot g"></div>Sin límites de uso</div>
+          <div class="og-row"><div class="og-dot g"></div>~4-5 GB RAM</div>
+        </div>
+        <div class="og-box groq">
+          <div class="og-name g">GROQ</div>
+          <div class="og-row"><div class="og-dot b"></div>Nube, rápido</div>
+          <div class="og-row"><div class="og-dot b"></div>llama-3.3-70b</div>
+          <div class="og-row"><div class="og-dot b"></div>14,400 req/día</div>
+          <div class="og-row"><div class="og-dot b"></div>Requiere API key</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel yellow">
+      <div class="ptitle yellow">Export · Import</div>
+      <div class="exp-row">
+        <div class="exp-box export">
+          <span class="exp-icon">📤</span>
+          <span class="exp-name y">EXPORT</span>
+          <div class="exp-desc">JSON completo: nodos, links, tarjetas, peso</div>
+        </div>
+        <div class="exp-box merge">
+          <span class="exp-icon">🔀</span>
+          <span class="exp-name g">MERGE</span>
+          <div class="exp-desc">Solo agrega lo nuevo, respeta lo existente</div>
+        </div>
+        <div class="exp-box replace">
+          <span class="exp-icon">♻️</span>
+          <span class="exp-name r">REPLACE</span>
+          <div class="exp-desc">Borra todo y restaura desde el archivo</div>
+        </div>
+      </div>
+      <div style="font-family:'Exo 2',sans-serif;font-size:10px;color:#6a7a90;margin-top:4px">Las tarjetas de aprendizaje guardadas se importan — no hace falta regenerarlas.</div>
+    </div>
+
+    <div class="panel purple">
+      <div class="ptitle" style="color:#d2a8ff">Vista 3D</div>
+      <div class="extra-grid" style="grid-template-columns:1fr;gap:5px">
+        <div style="font-family:'Exo 2',sans-serif;font-size:10.5px;color:#8899bb;line-height:1.5">
+          Mismo grafo en 3 dimensiones con Three.js. Los nodos se separan por categoría en el espacio.
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <div style="padding:4px 8px;background:rgba(210,168,255,.08);border:1px solid rgba(210,168,255,.2);border-radius:4px;font-family:'Exo 2',sans-serif;font-size:9px;color:#d2a8ff">Tamaño = weight</div>
+          <div style="padding:4px 8px;background:rgba(210,168,255,.08);border:1px solid rgba(210,168,255,.2);border-radius:4px;font-family:'Exo 2',sans-serif;font-size:9px;color:#d2a8ff">Rotación auto</div>
+          <div style="padding:4px 8px;background:rgba(210,168,255,.08);border:1px solid rgba(210,168,255,.2);border-radius:4px;font-family:'Exo 2',sans-serif;font-size:9px;color:#d2a8ff">Mismos tabs</div>
+          <div style="padding:4px 8px;background:rgba(210,168,255,.08);border:1px solid rgba(210,168,255,.2);border-radius:4px;font-family:'Exo 2',sans-serif;font-size:9px;color:#d2a8ff">Filtros 2D=3D</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel orange">
+      <div class="ptitle" style="color:#f78166">↻ Re-search</div>
+      <div style="height:calc(100% - 28px);display:flex;flex-direction:column;justify-content:space-between">
+        <div>
+          <div style="font-family:'Exo 2',sans-serif;font-size:10.5px;color:#8899bb;line-height:1.5;margin-bottom:6px">
+            Borra el caché y regenera todo desde cero con el estado actual del grafo.
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;gap:6px;align-items:center;font-family:'Exo 2',sans-serif;font-size:10px;color:#aab8cc">
+              <span style="color:#f78166;font-weight:700">1</span> Borra tarjeta guardada (DB + memoria)
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;font-family:'Exo 2',sans-serif;font-size:10px;color:#aab8cc">
+              <span style="color:#f78166;font-weight:700">2</span> Borra caché de Tenses y Similarity
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;font-family:'Exo 2',sans-serif;font-size:10px;color:#aab8cc">
+              <span style="color:#f78166;font-weight:700">3</span> Regenera tarjeta + similitud completa
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'Exo 2',sans-serif;font-size:9.5px;color:#6a7a90;padding:5px 7px;background:rgba(247,129,102,.06);border-radius:4px;border:1px dashed rgba(247,129,102,.2)">
+          ✦ La 2ª vez, Related Words ya existen → la similitud encuentra más conexiones
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="crawl">May the vocabulary be with you · FastAPI · SQLite · D3.js · Three.js · Ollama · Groq</div>
+  </div>
+
+</div>
+
+<script>
+const canvas = document.getElementById('stars');
+const ctx = canvas.getContext('2d');
+canvas.width = 1280;
+canvas.height = 800;
+// tiny stars
+for(let i=0;i<350;i++){
+  const x=Math.random()*1280,y=Math.random()*800,r=Math.random()*.7,a=Math.random()*.5+.15;
+  ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.fillStyle=`rgba(255,255,255,${a})`;ctx.fill();
+}
+// medium
+for(let i=0;i<70;i++){
+  const x=Math.random()*1280,y=Math.random()*800,r=Math.random()*1.1+.4,a=Math.random()*.5+.2;
+  ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.fillStyle=`rgba(180,210,255,${a})`;ctx.fill();
+}
+// bright with glow
+[[80,60],[250,120],[550,40],[850,90],[1150,55],[150,700],[450,680],[750,730],[1050,690],[70,350],[1200,300],[600,400]].forEach(([x,y])=>{
+  const g=ctx.createRadialGradient(x,y,0,x,y,7);
+  g.addColorStop(0,'rgba(255,255,220,.85)');g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+  ctx.beginPath();ctx.arc(x,y,1.3,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,1)';ctx.fill();
+});
+// twinkle
+const tw=[];for(let i=0;i<12;i++) tw.push({x:Math.random()*1280,y:Math.random()*800,ph:Math.random()*Math.PI*2});
+function tick(){
+  const t=Date.now()/1000;
+  tw.forEach(s=>{
+    const a=.3+.7*Math.abs(Math.sin(t*0.8+s.ph));
+    ctx.beginPath();ctx.arc(s.x,s.y,1.1,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,250,180,${a})`;ctx.fill();
+  });
+  requestAnimationFrame(tick);
+}
+tick();
+</script>
+</body>
+</html>

@@ -199,13 +199,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);overflow:hidden;color:v
     <div class="fdot" style="color:#3fb950;background:#3fb950"></div>Phrase
     <span class="fcount" id="fc-phrase">0</span>
   </div>
-  <div class="fcat" id="f-temporal" onclick="toggleCat('temporal')">
-    <div class="fdot" style="color:#f78166;background:#f78166"></div>Temporal
-    <span class="fcount" id="fc-temporal">0</span>
-  </div>
-  <div class="fcat" id="f-jargon"   onclick="toggleCat('jargon')">
-    <div class="fdot" style="color:#d2a8ff;background:#d2a8ff"></div>Jargon
-    <span class="fcount" id="fc-jargon">0</span>
+  <div class="fcat" id="f-composed" onclick="toggleCat('composed')">
+    <div class="fdot" style="color:#d2a8ff;background:#d2a8ff"></div>Composed
+    <span class="fcount" id="fc-composed">0</span>
   </div>
   <hr class="fline">
   <div style="font-size:10px;color:var(--muted);text-align:center;">bigger = more weight</div>
@@ -255,23 +251,21 @@ body{font-family:'Inter',sans-serif;background:var(--bg);overflow:hidden;color:v
 <script>
 const API = window.location.origin;
 
-const catColor = { concept:'#58a6ff', phrase:'#3fb950', temporal:'#f78166', jargon:'#d2a8ff' };
+const catColor = { concept:'#58a6ff', phrase:'#3fb950', composed:'#d2a8ff' };
 const catStyleMap = {
   concept:  {color:'var(--accent)',  border:'1px solid var(--accent)'},
   phrase:   {color:'var(--green)',   border:'1px solid var(--green)'},
-  temporal: {color:'var(--orange)',  border:'1px solid var(--orange)'},
-  jargon:   {color:'var(--purple)',  border:'1px solid var(--purple)'},
+  composed: {color:'var(--purple)',  border:'1px solid var(--purple)'},
 };
 const clusterPos = {
   concept:  [-55,  30,  20],
   phrase:   [ 55,  30, -20],
-  temporal: [ 25, -45,  50],
-  jargon:   [-25, -45, -50],
+  composed: [  0, -55,   0],
 };
 
 let Graph, autoRotate = true;
 let gData = { nodes:[], links:[] };
-let activeCats = new Set(['concept','phrase','temporal','jargon']);
+let activeCats = new Set(['concept','phrase','composed']);
 let selectedId = null, activeTab = 'learn';
 let aiCache = {}, simCache = {}, imageCache = {};
 
@@ -408,7 +402,7 @@ function applyVisibility(){
        });
 }
 function updateCounts(){
-  ['concept','phrase','temporal','jargon'].forEach(cat=>{
+  ['concept','phrase','composed'].forEach(cat=>{
     const el=document.getElementById(`fc-${cat}`);
     if(el) el.textContent=gData.nodes.filter(n=>n.cat===cat).length;
   });
