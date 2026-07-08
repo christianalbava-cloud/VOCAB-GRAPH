@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, AsyncGenerator
-import sqlite3, json, httpx, asyncio, re, os
+import sqlite3, json, httpx, asyncio, re, os, random
 from pathlib import Path
 from datetime import datetime
 
@@ -130,6 +130,14 @@ def init_db():
             db.execute("ALTER TABLE nodes ADD COLUMN image_url TEXT DEFAULT ''")
         if "weight" not in cols:
             db.execute("ALTER TABLE nodes ADD COLUMN weight INTEGER DEFAULT 1")
+        if "knowledge_level" not in cols:
+            db.execute("ALTER TABLE nodes ADD COLUMN knowledge_level TEXT DEFAULT 'new'")
+        if "last_reviewed" not in cols:
+            db.execute("ALTER TABLE nodes ADD COLUMN last_reviewed TEXT DEFAULT NULL")
+        if "review_count" not in cols:
+            db.execute("ALTER TABLE nodes ADD COLUMN review_count INTEGER DEFAULT 0")
+        if "correct_count" not in cols:
+            db.execute("ALTER TABLE nodes ADD COLUMN correct_count INTEGER DEFAULT 0")
 
         # migrate: jargon → concept, temporal → phrase (both categories removed)
         db.execute("UPDATE nodes SET cat='concept' WHERE cat='jargon'")
@@ -206,6 +214,167 @@ def row_to_dict(row):
 
 def rows_to_list(rows):
     return [dict(r) for r in rows]
+
+def _parse_card_full(ai_cache: str) -> dict:
+    """Parse all sections of a LLM card into structured lists."""
+    result = {'definition': [], 'examples': [], 'speak': [], 'ideas': [], 'related': []}
+    current = None
+    markers = {
+        '## DEFINITION':       'definition',
+        '## EXAMPLES':         'examples',
+        '## HOW TO SPEAK':     'speak',
+        '## IDEAS TO REMEMBER':'ideas',
+        '## RELATED WORDS':    'related',
+    }
+    for line in ai_cache.split('\n'):
+        stripped = line.strip()
+        upper = stripped.upper()
+        switched = False
+        for key, sec in markers.items():
+            if key in upper:
+                current = sec
+                switched = True
+                break
+        if switched or not current or not stripped:
+            continue
+        clean = re.sub(r'<[^>]+>', '', stripped)
+        clean = clean.lstrip('▸').lstrip('💡').lstrip('•').lstrip('-').strip()
+        if clean:
+            result[current].append(clean)
+    return result
+
+def _build_detective_clues(word: str, cat: str, card: dict) -> list:
+    """Build contextual clues hardest → easiest, mining the cached LLM card."""
+    word_parts = word.split()
+    total_letters = sum(len(w) for w in word_parts)
+
+    def blank(text: str) -> str:
+        out = text.strip().strip('"').strip("'")   # remove surrounding quotes from LLM
+        out = re.sub(r'<<[^>]+>>', '<strong>____</strong>', out)
+        if len(word_parts) == 1:
+            out = re.sub(r'\b' + re.escape(word) + r'\b', '<strong>____</strong>', out, flags=re.IGNORECASE)
+        else:
+            out = re.sub(re.escape(word), '<strong>____</strong>', out, flags=re.IGNORECASE)
+        return out
+
+    clues = []
+
+    # ── Clue 1 (hardest): fill-in-the-blank from EXAMPLES ──────
+    for ex in card.get('examples', []):
+        cleaned = re.sub(r'^\[[^\]]+\]:\s*', '', ex)  # strip [LABEL]:
+        b = blank(cleaned)
+        if '<strong>____</strong>' in b and len(b) > 25:
+            clues.append(f'Fill in the blank: "{b}"')
+            break
+
+    # ── Clue 2: HOW TO SPEAK phrase with word blanked ────────────
+    for phrase in card.get('speak', []):
+        b = blank(phrase)
+        if '<strong>____</strong>' in b and len(b) > 12:
+            clues.append(f'In a technical context, someone said: "{b}"')
+            break
+    else:
+        # fallback: use a speak phrase that doesn't contain the word as-is (still contextual)
+        for phrase in card.get('speak', []):
+            if word.lower() not in phrase.lower() and len(phrase) > 15:
+                clues.append(f'In a technical context: "{phrase}"')
+                break
+
+    # ── Clue 3: mnemonic / analogy from IDEAS ───────────────────
+    for idea in card.get('ideas', []):
+        b = blank(idea)
+        if len(idea) > 20:
+            clues.append(f'💡 A way to remember it: "{b}"')
+            break
+
+    # ── Clue 4: second example or definition fragment ────────────
+    example_count = 0
+    for ex in card.get('examples', []):
+        cleaned = re.sub(r'^\[[^\]]+\]:\s*', '', ex)
+        b = blank(cleaned)
+        if '<strong>____</strong>' in b and len(b) > 25:
+            example_count += 1
+            if example_count == 2:          # skip first (used in clue 1)
+                clues.append(f'Another context: "{b}"')
+                break
+
+    # ── Clue 5: category + word structure ───────────────────────
+    cat_labels = {
+        'concept':  'a technical or abstract concept',
+        'phrase':   'an English phrase or expression',
+        'composed': 'a composed multi-word term',
+    }
+    label = cat_labels.get(cat, f'a {cat}')
+    if len(word_parts) == 1:
+        clues.append(f'It is {label} ({total_letters} letters).')
+    else:
+        clues.append(f'It is {label} made of {len(word_parts)} words ({total_letters} letters total).')
+
+    # ── Clue 6: first letter + pattern ──────────────────────────
+    pattern = '  '.join('_' * len(w) for w in word_parts)
+    clues.append(f'Starts with <strong>"{word[0].upper()}"</strong> — pattern: <code>{pattern}</code>')
+
+    # ── Clue 7 (easiest): definition excerpt ────────────────────
+    defn = ' '.join(card.get('definition', []))
+    if defn:
+        excerpt = ' '.join(defn.split()[:13])
+        clues.append(f'Its definition begins: "<em>{excerpt}…</em>"')
+
+    return [c for c in clues if c]
+
+def _clean_def_text(text: str, strip_word: str = "", blank_word: str = "") -> str:
+    """Strip markdown/HTML, remove leading 'Word:' prefix, optionally blank a word."""
+    # strip HTML tags
+    text = re.sub(r'<[^>]+>', '', text)
+    # strip markdown bold/italic/code/blockquote/headers
+    text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+    text = re.sub(r'\*([^*]+)\*',     r'\1', text)
+    text = re.sub(r'`([^`]+)`',       r'\1', text)
+    text = re.sub(r'^>\s*',           '',    text, flags=re.MULTILINE)
+    text = re.sub(r'^#+\s*',          '',    text, flags=re.MULTILINE)
+    text = text.strip()
+    # remove leading (optionally quoted) "Word:" / "Word -" / "Word " prefix patterns
+    if strip_word:
+        esc = re.escape(strip_word)
+        # matches: Word: / "Word": / "Word" - / Word -
+        text = re.sub(r'^["\']?' + esc + r'["\']?\s*[:\-]\s*', '', text, flags=re.IGNORECASE)
+    # blank the word inside the text
+    if blank_word:
+        if ' ' in blank_word:
+            text = re.sub(re.escape(blank_word), '____', text, flags=re.IGNORECASE)
+        else:
+            text = re.sub(r'\b' + re.escape(blank_word) + r'\b', '____', text, flags=re.IGNORECASE)
+        # also remove surrounding quotes that now wrap ____ e.g. "____" → ____
+        text = re.sub(r'["\']____["\']', '____', text)
+    return text.strip()
+
+def _parse_definition(ai_cache: str) -> str:
+    """Extract plain-text definition from cached LLM output."""
+    if not ai_cache:
+        return ""
+    in_def = False
+    parts = []
+    for line in ai_cache.split("\n"):
+        if "## DEFINITION" in line.upper():
+            in_def = True
+            continue
+        if in_def and line.startswith("##"):
+            break
+        if in_def:
+            stripped = re.sub(r'<[^>]+>', '', line).strip()
+            if stripped:
+                parts.append(stripped)
+    return " ".join(parts)[:400]
+
+def _auto_knowledge_level(review_count: int, correct_count: int) -> str:
+    if review_count == 0:
+        return "new"
+    trust = correct_count / review_count
+    if trust >= 0.8 and review_count >= 5:
+        return "mastered"
+    if trust >= 0.6 and review_count >= 3:
+        return "learned"
+    return "new"
 
 # ── HEALTH ───────────────────────────────────────────────────
 @app.get("/api/health")
@@ -718,6 +887,241 @@ Keep it simple and practical for a non-native speaker. Fill every ___ with the r
             yield f"\n\n[Error: {e}]"
 
     return StreamingResponse(generate(), media_type="text/plain")
+
+# ── AI: TRANSLATE DEFINITION TO SPANISH ──────────────────────
+@app.post("/api/ai/translate")
+async def translate_definition(body: dict):
+    word       = body.get("word", "")
+    definition = body.get("definition", "").strip()
+    analogy    = body.get("analogy", "").strip()
+
+    if not definition:
+        return {"definition_es": "", "analogy_es": ""}
+
+    prompt = f"""Translate the following English text to Spanish for a systems engineer learning English.
+Keep technical terms in English (API, latency, bottleneck, deploy, cache, thread, etc).
+Be natural and clear. Use simple Spanish.
+
+Word being studied: "{word}"
+English definition: {definition}
+{"English analogy/mnemonic: " + analogy if analogy else ""}
+
+Respond ONLY with a raw JSON object. No markdown. No explanation. No extra text.
+Format: {{"definition_es": "...", "analogy_es": "..."}}
+If there is no analogy provided, set analogy_es to "".
+"""
+    try:
+        raw = await _llm_generate(prompt, timeout=40)
+        start = raw.find("{")
+        end   = raw.rfind("}") + 1
+        if start == -1 or end == 0:
+            return {"definition_es": "", "analogy_es": ""}
+        data = json.loads(raw[start:end])
+        return {
+            "definition_es": data.get("definition_es", ""),
+            "analogy_es":    data.get("analogy_es", ""),
+        }
+    except Exception as e:
+        print(f"[Translate error] {e}")
+        return {"definition_es": "", "analogy_es": ""}
+
+# ── DETECTIVE MODE ────────────────────────────────────────────
+
+@app.get("/api/detective/challenge")
+def detective_challenge(level: int = 3):
+    """Return a word challenge with clues. Level 1=easy (5 clues), 5=hard (1 clue)."""
+    n_clues = max(1, min(5, 6 - level))  # level1→5 clues, level5→1 clue
+
+    with get_db() as db:
+        rows = db.execute(
+            "SELECT id, cat, ai_cache FROM nodes WHERE ai_cache != '' AND cat='concept' ORDER BY RANDOM() LIMIT 30"
+        ).fetchall()
+
+    if not rows:
+        raise HTTPException(404, "No concept-category words with AI data yet. Add concept words first.")
+
+    chosen = None
+    definition = ""
+    for row in rows:
+        d = _parse_definition(row["ai_cache"])
+        if len(d) > 20:
+            chosen = row
+            definition = d
+            break
+
+    if not chosen:
+        raise HTTPException(404, "No words with parseable definitions found.")
+
+    word = chosen["id"]
+    cat  = chosen["cat"]
+
+    card      = _parse_card_full(chosen["ai_cache"])
+    clue_pool = _build_detective_clues(word, cat, card)
+
+    # take n_clues from the hardest end; show them in hardest→easiest order
+    selected = clue_pool[:max(1, min(n_clues, len(clue_pool)))]
+    return {"word": word, "cat": cat, "clues": selected, "level": level}
+
+
+@app.post("/api/detective/result")
+def detective_result(body: dict):
+    """Record a detective challenge result and update knowledge level."""
+    word    = body.get("word", "").strip()
+    correct = bool(body.get("correct", False))
+    if not word:
+        raise HTTPException(400, "word required")
+
+    with get_db() as db:
+        row = db.execute(
+            "SELECT review_count, correct_count FROM nodes WHERE id=?", (word,)
+        ).fetchone()
+        if not row:
+            raise HTTPException(404, "Word not found")
+
+        rc = (row["review_count"] or 0) + 1
+        cc = (row["correct_count"] or 0) + (1 if correct else 0)
+        kl = _auto_knowledge_level(rc, cc)
+
+        db.execute("""
+            UPDATE nodes SET review_count=?, correct_count=?, knowledge_level=?,
+                             last_reviewed=datetime('now')
+            WHERE id=?
+        """, (rc, cc, kl, word))
+
+    trust = round(cc / rc, 2)
+    return {"ok": True, "review_count": rc, "correct_count": cc, "trust": trust, "knowledge_level": kl}
+
+
+# ── REVIEW MODE ───────────────────────────────────────────────
+
+@app.get("/api/review/next")
+def review_next():
+    """Get the next word to review with 4-option multiple choice."""
+    with get_db() as db:
+        # auto-mark forgotten: learned/mastered not touched in 30+ days
+        db.execute("""
+            UPDATE nodes SET knowledge_level='forgotten'
+            WHERE knowledge_level IN ('learned','mastered')
+              AND last_reviewed IS NOT NULL
+              AND last_reviewed < datetime('now','-30 days')
+        """)
+
+        row = db.execute("""
+            SELECT id, cat, ai_cache, knowledge_level, last_reviewed, review_count, correct_count
+            FROM nodes WHERE ai_cache != ''
+            ORDER BY
+                CASE knowledge_level
+                    WHEN 'forgotten' THEN 0
+                    WHEN 'new'       THEN 1
+                    WHEN 'learned'   THEN 2
+                    WHEN 'mastered'  THEN 3
+                    ELSE 1 END,
+                COALESCE(last_reviewed,'1970-01-01'),
+                RANDOM()
+            LIMIT 1
+        """).fetchone()
+
+        if not row:
+            raise HTTPException(404, "No words to review")
+
+        word       = row["id"]
+        raw_def    = _parse_definition(row["ai_cache"])
+        if len(raw_def) < 10:
+            raise HTTPException(404, "No usable definition for review word")
+        # clean correct definition: strip markdown, remove "Word:" prefix, blank the word
+        definition = _clean_def_text(raw_def, strip_word=word, blank_word=word)
+
+        decoy_rows = db.execute("""
+            SELECT id, ai_cache FROM nodes WHERE id != ? AND ai_cache != ''
+            ORDER BY RANDOM() LIMIT 10
+        """, (word,)).fetchall()
+
+    decoy_defs = []
+    for d in decoy_rows:
+        raw = _parse_definition(d["ai_cache"])
+        # clean decoy: strip markdown and "Word:" prefix (don't blank — it's a different word)
+        cleaned = _clean_def_text(raw, strip_word=d["id"])
+        if len(cleaned) > 10 and len(decoy_defs) < 3:
+            decoy_defs.append({"word": d["id"], "definition": cleaned})
+
+    options = [{"word": word, "definition": definition, "correct": True}]
+    for d in decoy_defs:
+        options.append({"word": d["word"], "definition": d["definition"], "correct": False})
+    random.shuffle(options)
+
+    rc = row["review_count"] or 0
+    cc = row["correct_count"] or 0
+
+    days_since = None
+    if row["last_reviewed"]:
+        try:
+            from datetime import timedelta
+            lr = datetime.fromisoformat(row["last_reviewed"])
+            days_since = max(0, (datetime.utcnow() - lr).days)
+        except Exception:
+            pass
+
+    return {
+        "word":              word,
+        "cat":               row["cat"],
+        "knowledge_level":   row["knowledge_level"] or "new",
+        "days_since_review": days_since,
+        "review_count":      rc,
+        "trust":             round(cc / max(rc, 1), 2) if rc > 0 else 0,
+        "options":           options,
+    }
+
+
+@app.post("/api/review/answer")
+def review_answer(body: dict):
+    return detective_result(body)
+
+
+@app.patch("/api/nodes/{node_id}/knowledge")
+def set_knowledge(node_id: str, body: dict):
+    level = body.get("level", "new")
+    if level not in ("new", "learned", "mastered", "forgotten"):
+        raise HTTPException(400, "level must be: new, learned, mastered, or forgotten")
+    with get_db() as db:
+        db.execute("UPDATE nodes SET knowledge_level=? WHERE id=?", (level, node_id))
+    return {"ok": True, "knowledge_level": level}
+
+
+@app.get("/api/stats/trust")
+def stats_trust():
+    """Return per-word trust scores and knowledge-level distribution."""
+    with get_db() as db:
+        # auto-mark forgotten on stats load too
+        db.execute("""
+            UPDATE nodes SET knowledge_level='forgotten'
+            WHERE knowledge_level IN ('learned','mastered')
+              AND last_reviewed IS NOT NULL
+              AND last_reviewed < datetime('now','-30 days')
+        """)
+        rows = db.execute("""
+            SELECT id, cat, knowledge_level, review_count, correct_count, last_reviewed
+            FROM nodes ORDER BY review_count DESC, id
+        """).fetchall()
+
+    totals   = {"new": 0, "learned": 0, "mastered": 0, "forgotten": 0}
+    reviewed = []
+    for r in rows:
+        rc  = r["review_count"] or 0
+        cc  = r["correct_count"] or 0
+        kl  = r["knowledge_level"] or "new"
+        tr  = round(cc / rc, 2) if rc > 0 else None
+        totals[kl] = totals.get(kl, 0) + 1
+        if rc > 0:
+            reviewed.append(tr)
+
+    avg_trust = round(sum(reviewed) / len(reviewed), 2) if reviewed else 0
+    return {
+        "totals":         totals,
+        "avg_trust":      avg_trust,
+        "total_reviewed": len(reviewed),
+        "total_words":    len(rows),
+    }
+
 
 # ── SERVE FRONTEND ────────────────────────────────────────────
 frontend_path = Path(__file__).parent / "frontend"

@@ -75,6 +75,93 @@ svg#graph{width:100%;height:100%;}
 .dtab{padding:7px 13px;font-size:12px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;}
 .dtab.on{color:var(--accent);border-bottom-color:var(--accent);}
 .dscroll{overflow-y:auto;flex:1;padding:16px;}
+.def-tabs{display:flex;gap:6px;margin-bottom:10px;}
+.def-tab{padding:3px 11px;font-size:11px;cursor:pointer;border-radius:12px;border:1px solid var(--border);color:var(--muted);transition:all .15s;user-select:none;}
+.def-tab.on{background:rgba(88,166,255,.12);border-color:var(--accent);color:var(--accent);}
+.analogy-box{border-left:3px solid var(--yellow,#e3b341);background:rgba(227,179,65,.06);border-radius:0 6px 6px 0;padding:10px 13px;margin-top:4px;font-size:13px;color:var(--text);line-height:1.6;}
+
+/* DETECTIVE MODE OVERLAY */
+.det-panel{width:100%;max-width:820px;height:100vh;margin:0 auto;background:var(--surface);display:flex;flex-direction:column;border-left:1px solid var(--border);border-right:1px solid var(--border);}
+.det-header{display:flex;align-items:center;gap:10px;padding:13px 20px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.det-title{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);letter-spacing:1.5px;}
+.det-modes{display:flex;gap:5px;margin-left:auto;}
+.det-mode-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 14px;border-radius:20px;font-size:12px;cursor:pointer;transition:all .2s;}
+.det-mode-btn.on{border-color:var(--accent);color:var(--accent);background:rgba(88,166,255,.1);}
+.det-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:0 4px;margin-left:6px;}
+.det-close:hover{color:var(--text);}
+.det-tab-content{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.det-level-bar{display:flex;align-items:center;gap:10px;padding:11px 20px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
+.det-level-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
+.det-levels{display:flex;gap:4px;}
+.det-lvl{width:36px;height:36px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;position:relative;}
+.det-lvl span{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:7px;text-transform:uppercase;letter-spacing:.4px;opacity:.6;}
+.det-lvl.on{border-color:var(--accent);color:var(--accent);background:rgba(88,166,255,.12);}
+.det-lvl:hover{border-color:var(--accent);color:var(--accent);}
+.det-new-btn{margin-left:auto;background:var(--accent);color:#0d1117;border:none;padding:7px 15px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;transition:opacity .2s;}
+.det-new-btn:hover{opacity:.85;}
+.det-body{flex:1;overflow-y:auto;padding:24px 28px;}
+.det-thinking{font-size:18px;font-weight:600;color:var(--text);margin-bottom:20px;font-family:'JetBrains Mono',monospace;letter-spacing:.5px;}
+.det-clues{display:flex;flex-direction:column;gap:9px;margin-bottom:24px;}
+.det-clue{background:var(--s2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;padding:11px 15px;font-size:13px;line-height:1.65;animation:clueIn .3s ease both;}
+@keyframes clueIn{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:none;}}
+.det-clue-num{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:3px;}
+.det-guess-area{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.det-guess-input{flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:9px 13px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;}
+.det-guess-input:focus{border-color:var(--accent);}
+.det-guess-btn{background:var(--accent);color:#0d1117;border:none;padding:9px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;}
+.det-guess-btn:hover{opacity:.85;}
+.det-reveal-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:9px 14px;border-radius:7px;font-size:13px;cursor:pointer;}
+.det-reveal-btn:hover{border-color:var(--muted);color:var(--text);}
+.det-result{margin-top:18px;padding:15px 18px;border-radius:8px;font-size:13px;line-height:1.7;}
+.det-result.correct{background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.3);}
+.det-result.wrong{background:rgba(247,129,102,.08);border:1px solid rgba(247,129,102,.3);}
+.det-result.revealed{background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);}
+.det-result-icon{font-size:22px;margin-bottom:7px;}
+.det-result-word{font-size:21px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent);margin-bottom:5px;}
+.det-go-btn{margin-top:11px;background:transparent;border:1px solid var(--accent);color:var(--accent);padding:6px 13px;border-radius:6px;font-size:12px;cursor:pointer;display:inline-block;}
+.det-go-btn:hover{background:rgba(88,166,255,.12);}
+
+/* REVIEW MODE */
+.rev-word-card{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:18px;}
+.rev-days{font-size:12px;color:var(--muted);margin-bottom:7px;line-height:1.5;}
+.rev-word-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:4px;}
+.rev-word{font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text);}
+.rev-trust{font-size:11px;color:var(--muted);}
+.rev-question{font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px;}
+.rev-options{display:flex;flex-direction:column;gap:7px;margin-bottom:16px;}
+.rev-opt{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px 15px;cursor:pointer;transition:all .18s;font-size:13px;line-height:1.6;display:flex;align-items:flex-start;gap:8px;}
+.rev-opt:hover:not(.correct):not(.wrong){border-color:var(--accent);background:rgba(88,166,255,.06);}
+.rev-opt.selected{border-color:var(--accent);background:rgba(88,166,255,.1);}
+.rev-opt.correct{border-color:var(--green);background:rgba(63,185,80,.1);cursor:default;}
+.rev-opt.wrong{border-color:var(--orange);background:rgba(247,129,102,.08);cursor:default;}
+.rev-opt-letter{font-size:11px;font-weight:700;color:var(--muted);font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:1px;}
+.rev-submit{background:var(--accent);color:#0d1117;border:none;padding:9px 20px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:11px;}
+.rev-submit:disabled{opacity:.35;cursor:default;}
+.rev-result{padding:12px 15px;border-radius:7px;font-size:13px;line-height:1.6;margin-bottom:12px;}
+.rev-result.correct{background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.3);color:var(--green);}
+.rev-result.wrong{background:rgba(247,129,102,.08);border:1px solid rgba(247,129,102,.3);color:var(--orange);}
+.rev-next-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 16px;border-radius:7px;font-size:12px;cursor:pointer;}
+.rev-next-btn:hover{border-color:var(--accent);color:var(--accent);}
+.rev-empty{text-align:center;padding:50px 20px;color:var(--muted);font-size:13px;line-height:1.8;}
+
+/* KNOWLEDGE LEVEL BADGES */
+.kl-badge{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:2px 7px;border-radius:10px;border:1px solid;font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+.kl-new{color:var(--muted);border-color:var(--muted);}
+.kl-learned{color:var(--yellow);border-color:var(--yellow);}
+.kl-mastered{color:var(--green);border-color:var(--green);}
+.kl-forgotten{color:var(--orange);border-color:var(--orange);}
+
+/* KNOWLEDGE STATS CARD */
+.kl-dist{display:flex;flex-direction:column;gap:8px;margin-top:10px;}
+.kl-row{display:flex;align-items:center;gap:8px;}
+.kl-name{font-size:11px;color:var(--muted);width:68px;flex-shrink:0;}
+.kl-bar-wrap{flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden;}
+.kl-bar{height:100%;border-radius:3px;transition:width .5s ease;}
+.kl-count{font-size:11px;font-family:'JetBrains Mono',monospace;width:26px;text-align:right;flex-shrink:0;}
+.trust-gauge{margin-top:14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:13px 14px;}
+.trust-val{font-size:28px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent);}
+.trust-lbl{font-size:11px;color:var(--muted);}
+.trust-desc{font-size:11px;color:var(--muted);margin-top:7px;line-height:1.55;font-style:italic;}
 
 /* CONTENT */
 .sec{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:14px 0 7px;display:flex;align-items:center;gap:8px;}
@@ -291,6 +378,15 @@ svg#graph{width:100%;height:100%;}
 .flt-btn.on{color:var(--text);border-color:currentColor;}
 .flt-btn .fldot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 
+/* LISTEN BAR */
+.listen-bar{display:flex;align-items:center;gap:9px;margin-bottom:14px;}
+.listen-btn{display:flex;align-items:center;gap:5px;background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 13px;border-radius:20px;font-size:11px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.listen-btn:hover{border-color:var(--accent);color:var(--accent);}
+.listen-btn.on{border-color:var(--orange);color:var(--orange);background:rgba(247,129,102,.08);animation:listenPulse 1.4s ease-in-out infinite;}
+@keyframes listenPulse{0%,100%{opacity:1;}50%{opacity:.55;}}
+.listen-hint{font-size:10px;color:var(--muted);line-height:1.4;}
+.listen-progress{font-size:10px;color:var(--orange);font-style:italic;}
+
 /* CONCEPT IMAGE */
 .img-btn{display:flex;align-items:center;gap:7px;background:var(--s2);border:1px dashed var(--border);color:var(--muted);padding:9px 14px;border-radius:8px;font-size:12px;cursor:pointer;width:100%;transition:all .2s;margin-top:2px;}
 .img-btn:hover{border-color:var(--accent);color:var(--accent);}
@@ -330,6 +426,7 @@ svg#graph{width:100%;height:100%;}
   <button class="hbtn" onclick="openStatsDrawer()">📊 Stats</button>
   <button class="hbtn" id="phraseModeBtn" onclick="togglePhraseMode()">🔗 Phrase Mode</button>
   <a class="hbtn" href="/graph3d.html" style="text-decoration:none">✦ 3D View</a>
+  <button class="hbtn" onclick="openDetective()">🔍 Detective</button>
   <button class="hbtn" onclick="exportGraph()">⬇ Export</button>
   <button class="hbtn" onclick="openImportModal()">⬆ Import</button>
   <button class="hbtn primary" onclick="openModal()">+ Add Word</button>
@@ -404,6 +501,50 @@ svg#graph{width:100%;height:100%;}
         <button class="pbb go" onclick="pbAnalyze()">✦ Analyze</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- DETECTIVE MODE OVERLAY -->
+<div class="overlay" id="detectiveOverlay" style="align-items:flex-start;padding:0;z-index:400;">
+  <div class="det-panel">
+
+    <div class="det-header">
+      <span class="det-title">🔍 DETECTIVE MODE</span>
+      <div class="det-modes">
+        <button class="det-mode-btn on" id="detModeDet" onclick="switchDetTab('detective')">🕵️ Detective</button>
+        <button class="det-mode-btn"    id="detModeRev" onclick="switchDetTab('review')">📚 Review</button>
+      </div>
+      <button class="det-close" onclick="closeDetective()">×</button>
+    </div>
+
+    <!-- DETECTIVE TAB -->
+    <div id="detTab-detective" class="det-tab-content">
+      <div class="det-level-bar">
+        <span class="det-level-lbl">Difficulty:</span>
+        <div class="det-levels">
+          <button class="det-lvl" data-lvl="1" onclick="setDetLevel(1)">1<span>Easy</span></button>
+          <button class="det-lvl" data-lvl="2" onclick="setDetLevel(2)">2</button>
+          <button class="det-lvl on" data-lvl="3" onclick="setDetLevel(3)">3<span>Med</span></button>
+          <button class="det-lvl" data-lvl="4" onclick="setDetLevel(4)">4</button>
+          <button class="det-lvl" data-lvl="5" onclick="setDetLevel(5)">5<span>Hard</span></button>
+        </div>
+        <button class="det-new-btn" onclick="loadChallenge()">New Challenge →</button>
+      </div>
+      <div class="det-body" id="detBody">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:60px 20px;line-height:1.8">
+          Press <strong style="color:var(--accent)">New Challenge →</strong> to start.<br>
+          The AI will pick a word from your vocabulary and give you clues.
+        </div>
+      </div>
+    </div>
+
+    <!-- REVIEW TAB -->
+    <div id="detTab-review" class="det-tab-content" style="display:none;">
+      <div class="det-body" id="revBody">
+        <div class="loading"><div class="spin"></div>Loading…</div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -514,6 +655,17 @@ svg#graph{width:100%;height:100%;}
       <div class="stats-total" id="statsTotalNum">—</div>
       <div class="stats-total-lbl" id="statsTotalLbl">words in your graph</div>
       <div id="statsCatBody"></div>
+    </div>
+
+    <!-- MIDDLE: knowledge evolution card -->
+    <div class="stats-card" id="klCard">
+      <div class="stats-card-title">Knowledge Evolution</div>
+      <div id="klBody"><div class="loading" style="padding:4px 0"><div class="spin"></div>Loading…</div></div>
+      <div class="trust-gauge" id="trustGauge" style="display:none">
+        <div class="trust-val" id="trustVal">—</div>
+        <div class="trust-lbl">average trust score</div>
+        <div class="trust-desc" id="trustDesc">"You may know the definition,<br>but might not feel comfortable using it."</div>
+      </div>
     </div>
 
     <!-- RIGHT: semantic help card -->
@@ -847,6 +999,7 @@ function onNodeClick(d){
 //  DETAIL PANEL
 // ══════════════════════════════════════════════
 function showDetail(id,cat){
+  if(id !== selectedId) stopLearnSpeech();
   document.getElementById('dPanel').classList.remove('hidden');
   document.getElementById('dhWord').textContent=id;
   const cs=catStyleMap[cat]||catStyleMap.user;
@@ -873,6 +1026,7 @@ function showDetail(id,cat){
 }
 
 function closeDetail(){
+  stopLearnSpeech();
   document.getElementById('dPanel').classList.add('hidden');
   d3.selectAll('.node circle:first-child').attr('fill-opacity',.18).attr('stroke-width',1.8).attr('filter',null);
   d3.selectAll('.link').attr('stroke-opacity',.8).attr('stroke-width',l=>(l.score||.5)>=.75?2.5:1.5);
@@ -880,6 +1034,7 @@ function closeDetail(){
 }
 
 function switchTab(el){
+  stopLearnSpeech();
   activeTab=el.dataset.tab;
   document.querySelectorAll('.dtab').forEach(t=>t.classList.toggle('on',t===el));
   if(selectedId){ const n=nodes.find(v=>v.id===selectedId); renderTab(selectedId,n?.cat||'concept'); }
@@ -930,7 +1085,33 @@ function renderTab(id,cat){
 
   if(tab==='learn'){
     let h='';
-    if(p.definition) h+=`<div class="sec">Definition</div><div class="box bl-accent">${p.definition}</div>`;
+    const listenHint = activeDefLang==='es'
+      ? 'definición en español · analogía'
+      : 'definition · examples · memory tip';
+    h+=`<div class="listen-bar">
+      <button class="listen-btn" id="learnListenBtn" onclick="speakLearnTab()">🔊 Listen</button>
+      <span class="listen-hint">${listenHint}</span>
+    </div>`;
+    if(p.definition){
+      h+=`<div class="sec">Definition</div>`;
+      h+=`<div class="def-tabs">
+        <span class="def-tab ${activeDefLang==='en'?'on':''}" onclick="switchDefLang('en','${esc(id)}')">🇺🇸 English</span>
+        <span class="def-tab ${activeDefLang==='es'?'on':''}" onclick="switchDefLang('es','${esc(id)}')">🇪🇸 Español</span>
+      </div>`;
+      if(activeDefLang==='es'){
+        const tc=transCache[id];
+        if(!tc){
+          h+=`<div class="box bl-accent"><div class="loading" style="padding:0;margin:0"><div class="spin"></div>Traduciendo…</div></div>`;
+          setTimeout(()=>fetchTranslation(id,cat),0);
+        } else {
+          const escHtml=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          h+=`<div class="box bl-accent">${escHtml(tc.definition_es)}</div>`;
+          if(tc.analogy_es) h+=`<div class="sec">Analogía</div><div class="analogy-box">💡 ${escHtml(tc.analogy_es)}</div>`;
+        }
+      } else {
+        h+=`<div class="box bl-accent">${p.definition}</div>`;
+      }
+    }
     if(cat==='concept'){
       const img=imageCache[id];
       h+=`<div class="sec">Visual Memory</div>`;
@@ -1023,6 +1204,8 @@ function renderSimTab(id,sims){
 //  TENSES TAB
 // ══════════════════════════════════════════════
 let tensesCache={};
+let transCache={};
+let activeDefLang='en';
 
 async function streamTenses(id){
   let full='';
@@ -1149,11 +1332,36 @@ async function forceResearch(){
   btn.classList.add('spinning'); btn.disabled=true;
   delete aiCache[selectedId];
   delete tensesCache[selectedId];
+  delete transCache[selectedId];
   await apiPost(`/api/nodes/${encodeURIComponent(selectedId)}/cache`,{word:selectedId,cache:''});
   btn.classList.remove('spinning'); btn.disabled=false;
   activeTab='learn';
   document.querySelectorAll('.dtab').forEach(t=>t.classList.toggle('on',t.dataset.tab==='learn'));
   streamDetail(selectedId,n.cat);
+}
+
+function switchDefLang(lang, id){
+  activeDefLang = lang;
+  const n = nodes.find(v=>v.id===id);
+  renderTab(id, n?.cat||'concept');
+}
+
+async function fetchTranslation(id, cat){
+  const raw = aiCache[id]||'';
+  const p = parseCard(raw);
+  if(!p.definition) return;
+  const defPlain = p.definition.replace(/<br\s*\/?>/gi,' ').replace(/<[^>]+>/g,'');
+  const analogy  = p.ideas[0]||'';
+  try{
+    const d = await apiPost('/api/ai/translate', {word:id, definition:defPlain, analogy});
+    transCache[id] = d;
+  } catch(e){
+    transCache[id] = {definition_es:'Error al traducir.', analogy_es:''};
+  }
+  if(activeDefLang==='es' && selectedId===id){
+    const n = nodes.find(v=>v.id===id);
+    renderTab(id, n?.cat||cat);
+  }
 }
 
 function refreshNodeSizes(){
@@ -1453,8 +1661,42 @@ async function pbAnalyze(){
 // ══════════════════════════════════════════════
 function openStatsDrawer(){
   buildStatsCard();
+  loadTrustStats();
   document.getElementById('drwOverlay').classList.add('open');
   document.getElementById('statsDrawer').classList.add('open');
+}
+
+async function loadTrustStats(){
+  const klColors = {new:'#8b949e', learned:'#e3b341', mastered:'#3fb950', forgotten:'#f78166'};
+  try{
+    const d = await fetch(`${API}/api/stats/trust`).then(r=>r.json());
+    const total = d.total_words || 1;
+    const kls = ['mastered','learned','new','forgotten'];
+    let html = '<div class="kl-dist">';
+    kls.forEach(kl=>{
+      const cnt = d.totals[kl] || 0;
+      const pct = Math.round(cnt / total * 100);
+      html += `<div class="kl-row">
+        <span class="kl-name"><span class="kl-badge kl-${kl}">${kl}</span></span>
+        <div class="kl-bar-wrap"><div class="kl-bar" style="width:${pct}%;background:${klColors[kl]}"></div></div>
+        <span class="kl-count" style="color:${klColors[kl]}">${cnt}</span>
+      </div>`;
+    });
+    html += `</div><div style="font-size:11px;color:var(--muted);margin-top:10px">${d.total_reviewed} of ${d.total_words} words reviewed</div>`;
+    document.getElementById('klBody').innerHTML = html;
+
+    if(d.total_reviewed > 0){
+      const pct = Math.round(d.avg_trust * 100);
+      document.getElementById('trustVal').textContent = pct + '%';
+      const desc = pct >= 80 ? 'You feel comfortable using most reviewed words.'
+                 : pct >= 60 ? 'You know the definitions but may hesitate when speaking.'
+                 : 'You may know the definition, but might not feel comfortable using it.';
+      document.getElementById('trustDesc').textContent = `"${desc}"`;
+      document.getElementById('trustGauge').style.display = '';
+    }
+  } catch(e){
+    document.getElementById('klBody').innerHTML = `<div style="font-size:12px;color:var(--muted)">Start reviewing words in Detective Mode to see stats.</div>`;
+  }
 }
 function closeStatsDrawer(){
   document.getElementById('drwOverlay').classList.remove('open');
@@ -1631,6 +1873,328 @@ async function runImport(){
     alert('Import error: ' + e.message);
   }
 }
+
+// ══════════════════════════════════════════════
+//  LEARN TAB — LISTEN (TTS)
+// ══════════════════════════════════════════════
+let ttsActive = false;
+let _ttsParts  = [];
+let _ttsIdx    = 0;
+
+function buildLearnScript(){
+  if(!selectedId) return [];
+  const raw = aiCache[selectedId] || '';
+  const p   = parseCard(raw);
+  const tc  = transCache[selectedId];
+  const isEs = activeDefLang === 'es';
+
+  const strip = s => s
+    .replace(/<<(.+?)>>/g,'$1')
+    .replace(/<br\s*\/?>/gi,' ')
+    .replace(/<[^>]+>/g,'')
+    .replace(/💡\s*/g,'')
+    .replace(/▸\s*/g,'')
+    .trim();
+
+  const parts = [];
+
+  // always start with the word itself in English
+  parts.push({text: selectedId, lang:'en-US'});
+
+  if(isEs && tc){
+    // ── Spanish mode ───────────────────────────
+    if(tc.definition_es){
+      parts.push({text:'Definición.', lang:'es-ES'});
+      parts.push({text: strip(tc.definition_es), lang:'es-ES'});
+    }
+    if(tc.analogy_es){
+      parts.push({text:'Analogía.', lang:'es-ES'});
+      parts.push({text: strip(tc.analogy_es), lang:'es-ES'});
+    }
+  } else {
+    // ── English mode ───────────────────────────
+    if(p.definition){
+      parts.push({text:'Definition.', lang:'en-US'});
+      parts.push({text: strip(p.definition), lang:'en-US'});
+    }
+    if(p.examples.length){
+      parts.push({text:'Examples.', lang:'en-US'});
+      p.examples.forEach((ex,i)=>{
+        parts.push({text:`${ex.label}. ${strip(ex.sentence)}`, lang:'en-US', label:`Example ${i+1}`});
+      });
+    }
+    if(p.ideas.length){
+      parts.push({text:'A way to remember it.', lang:'en-US'});
+      parts.push({text: strip(p.ideas[0]), lang:'en-US'});
+    }
+  }
+
+  return parts;
+}
+
+function speakLearnTab(){
+  if(!window.speechSynthesis) return;
+  if(ttsActive){ stopLearnSpeech(); return; }
+
+  _ttsParts = buildLearnScript();
+  if(!_ttsParts.length) return;
+
+  window.speechSynthesis.cancel();
+  ttsActive = true;
+  _ttsIdx   = 0;
+  updateListenBtn(true);
+  _ttsNext();
+}
+
+function _ttsNext(){
+  if(!ttsActive || _ttsIdx >= _ttsParts.length){ stopLearnSpeech(); return; }
+  const part = _ttsParts[_ttsIdx++];
+  const u = new SpeechSynthesisUtterance(part.text);
+  u.lang  = part.lang || 'en-US';
+  u.rate  = 0.88;
+  u.onend  = _ttsNext;
+  u.onerror = ()=>stopLearnSpeech();
+  window.speechSynthesis.speak(u);
+}
+
+function stopLearnSpeech(){
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+  ttsActive = false;
+  _ttsParts = [];
+  _ttsIdx   = 0;
+  updateListenBtn(false);
+}
+
+function updateListenBtn(playing){
+  const btn = document.getElementById('learnListenBtn');
+  if(!btn) return;
+  btn.innerHTML = playing ? '⏹ Stop' : '🔊 Listen';
+  btn.classList.toggle('on', playing);
+}
+
+// ══════════════════════════════════════════════
+//  DETECTIVE MODE
+// ══════════════════════════════════════════════
+let detLevel = 3;
+let detCurrentWord = null;
+let detAnswered = false;
+let revData = null;
+let revSelected = null;
+let revAnswered = false;
+
+function openDetective(){
+  document.getElementById('detectiveOverlay').classList.add('open');
+}
+
+function closeDetective(){
+  document.getElementById('detectiveOverlay').classList.remove('open');
+}
+
+function switchDetTab(tab){
+  document.getElementById('detTab-detective').style.display = tab==='detective' ? 'flex' : 'none';
+  document.getElementById('detTab-review').style.display    = tab==='review'    ? 'flex' : 'none';
+  document.getElementById('detModeDet').classList.toggle('on', tab==='detective');
+  document.getElementById('detModeRev').classList.toggle('on', tab==='review');
+  if(tab==='review') loadReview();
+}
+
+function setDetLevel(n){
+  detLevel = n;
+  document.querySelectorAll('.det-lvl').forEach(b => b.classList.toggle('on', +b.dataset.lvl === n));
+}
+
+async function loadChallenge(){
+  const body = document.getElementById('detBody');
+  body.innerHTML = `<div class="loading"><div class="spin"></div>Picking a word from your vocabulary…</div>`;
+  detCurrentWord = null; detAnswered = false;
+  try{
+    const d = await fetch(`${API}/api/detective/challenge?level=${detLevel}`).then(r=>{
+      if(!r.ok) throw new Error('Not enough words with definitions yet');
+      return r.json();
+    });
+    detCurrentWord = d;
+    renderChallenge(d);
+  } catch(e){
+    body.innerHTML = `<div style="color:var(--orange);padding:20px;font-size:13px">⚠ ${e.message}<br><small style="color:var(--muted)">Add words and let them generate definitions first.</small></div>`;
+  }
+}
+
+function renderChallenge(d){
+  const body = document.getElementById('detBody');
+  const clueHTML = d.clues.map((c,i)=>`
+    <div class="det-clue" style="animation-delay:${i*0.12}s">
+      <div class="det-clue-num">Clue ${i+1}</div>
+      ${c}
+    </div>`).join('');
+  body.innerHTML = `
+    <div class="det-thinking">🕵️ I'm thinking of a word…</div>
+    <div class="det-clues">${clueHTML}</div>
+    <div class="det-guess-area">
+      <input class="det-guess-input" id="detGuessInput" type="text"
+        placeholder="Type your guess…" autocomplete="off"
+        onkeydown="if(event.key==='Enter')submitGuess()">
+      <button class="det-guess-btn" onclick="submitGuess()">Guess →</button>
+      <button class="det-reveal-btn" onclick="revealAnswer()">Reveal</button>
+    </div>
+    <div class="det-result" id="detResult" style="display:none"></div>`;
+  setTimeout(()=>document.getElementById('detGuessInput')?.focus(), 80);
+}
+
+function submitGuess(){
+  if(!detCurrentWord || detAnswered) return;
+  const inp = document.getElementById('detGuessInput');
+  const guess = inp.value.trim().toLowerCase();
+  if(!guess) return;
+  detAnswered = true;
+  const correct = guess === detCurrentWord.word.toLowerCase();
+  showDetResult(correct ? 'correct' : 'wrong', detCurrentWord.word, guess);
+  fetch(`${API}/api/detective/result`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({word: detCurrentWord.word, correct})
+  }).then(r=>r.json()).then(upd=>{
+    const n = nodes.find(v=>v.id===detCurrentWord.word);
+    if(n) n.knowledge_level = upd.knowledge_level;
+  }).catch(()=>{});
+}
+
+function revealAnswer(){
+  if(!detCurrentWord || detAnswered) return;
+  detAnswered = true;
+  showDetResult('revealed', detCurrentWord.word, null);
+  fetch(`${API}/api/detective/result`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({word: detCurrentWord.word, correct: false})
+  }).catch(()=>{});
+}
+
+function showDetResult(type, word, guess){
+  const el = document.getElementById('detResult');
+  el.style.display = 'block';
+  el.className = `det-result ${type}`;
+  const goBtn = `<button class="det-go-btn" onclick="goToDetWord('${esc(word)}')">Open in graph →</button>`;
+  if(type==='correct'){
+    el.innerHTML = `<div class="det-result-icon">✅</div><div style="color:var(--green);font-weight:600;margin-bottom:6px">Correct! Well done.</div><div class="det-result-word">${word}</div>${goBtn}`;
+  } else if(type==='wrong'){
+    el.innerHTML = `<div class="det-result-icon">❌</div><div style="color:var(--orange);font-weight:600;margin-bottom:6px">Not quite — you guessed: "<em>${guess}</em>"</div><div class="det-result-word">${word}</div>${goBtn}`;
+  } else {
+    el.innerHTML = `<div class="det-result-icon">👁</div><div style="color:var(--muted);margin-bottom:6px">The word was revealed.</div><div class="det-result-word">${word}</div>${goBtn}`;
+  }
+}
+
+function goToDetWord(word){
+  closeDetective();
+  const node = nodes.find(n=>n.id===word);
+  if(!node) return;
+  selectedId=word; hlNode(word); showDetail(word, node.cat);
+  const dn = sim && sim.nodes().find(n=>n.id===word);
+  if(dn){
+    const panel=document.getElementById('gPanel');
+    const W=panel.clientWidth, H=panel.clientHeight, scale=1.8;
+    svgEl.transition().duration(700).call(
+      zoomB.transform, d3.zoomIdentity.translate(W/2-scale*dn.x, H/2-scale*dn.y).scale(scale)
+    );
+  }
+}
+
+// ── REVIEW MODE ─────────────────────────────────────────────
+
+async function loadReview(){
+  revData=null; revSelected=null; revAnswered=false;
+  const body = document.getElementById('revBody');
+  body.innerHTML = `<div class="loading"><div class="spin"></div>Loading next word to review…</div>`;
+  try{
+    const d = await fetch(`${API}/api/review/next`).then(r=>{
+      if(!r.ok) throw new Error('none');
+      return r.json();
+    });
+    revData = d;
+    renderReview(d);
+  } catch(e){
+    body.innerHTML = `<div class="rev-empty">🎉 <strong>Nothing to review right now!</strong><br>Add more words to your graph, or come back later.<br><small>Words marked "forgotten" (30+ days no review) get prioritized.</small></div>`;
+  }
+}
+
+function renderReview(d){
+  const body = document.getElementById('revBody');
+  const letters = ['A','B','C','D'];
+  const klClass = `kl-${d.knowledge_level}`;
+  const daysMsg = d.days_since_review != null
+    ? `It's been <strong>${d.days_since_review} day${d.days_since_review===1?'':'s'}</strong> since you last reviewed:`
+    : `You haven't reviewed this word yet:`;
+  const trustTxt = d.review_count > 0
+    ? `Trust: ${Math.round(d.trust*100)}% · ${d.review_count} review${d.review_count===1?'':'s'}`
+    : 'First review';
+
+  const optsHTML = d.options.map((opt,i)=>`
+    <div class="rev-opt" id="revOpt-${i}" onclick="selectRevOpt(${i})">
+      <span class="rev-opt-letter">${letters[i]}.</span>
+      <span>${opt.definition}</span>
+    </div>`).join('');
+
+  body.innerHTML = `
+    <div class="rev-word-card">
+      <div class="rev-days">${daysMsg}</div>
+      <div class="rev-word-row">
+        <span class="rev-word">${d.word}</span>
+        <span class="kl-badge ${klClass}">${d.knowledge_level}</span>
+      </div>
+      <div class="rev-trust">${trustTxt}</div>
+    </div>
+    <div class="rev-question">Do you remember what it means?</div>
+    <div class="rev-options" id="revOptions">${optsHTML}</div>
+    <button class="rev-submit" id="revSubmit" onclick="submitReview()" disabled>Submit Answer</button>
+    <div class="rev-result" id="revResult" style="display:none"></div>
+    <button class="rev-next-btn" id="revNext" onclick="loadReview()" style="display:none">→ Next Word</button>`;
+}
+
+function selectRevOpt(idx){
+  if(revAnswered) return;
+  revSelected = idx;
+  document.querySelectorAll('.rev-opt').forEach((el,i)=>el.classList.toggle('selected', i===idx));
+  document.getElementById('revSubmit').disabled = false;
+}
+
+async function submitReview(){
+  if(revSelected===null || !revData || revAnswered) return;
+  revAnswered = true;
+  const correct = revData.options[revSelected].correct;
+  document.getElementById('revSubmit').disabled = true;
+
+  revData.options.forEach((opt,i)=>{
+    const el = document.getElementById(`revOpt-${i}`);
+    if(opt.correct) el.classList.add('correct');
+    else if(i===revSelected) el.classList.add('wrong');
+  });
+
+  const res = document.getElementById('revResult');
+  res.style.display = 'block';
+  if(correct){
+    res.className='rev-result correct';
+    res.innerHTML='✅ <strong>Correct!</strong> You know this one.';
+  } else {
+    res.className='rev-result wrong';
+    res.innerHTML='❌ <strong>Not quite.</strong> The correct answer is highlighted in green.';
+  }
+  document.getElementById('revNext').style.display='';
+
+  try{
+    const upd = await fetch(`${API}/api/review/answer`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({word: revData.word, correct})
+    }).then(r=>r.json());
+    const n = nodes.find(v=>v.id===revData.word);
+    if(n) n.knowledge_level = upd.knowledge_level;
+    const badge = document.querySelector('.rev-word-row .kl-badge');
+    if(badge){ badge.className=`kl-badge kl-${upd.knowledge_level}`; badge.textContent=upd.knowledge_level; }
+    res.innerHTML += `<br><small style="color:var(--muted);font-size:11px">Level: <span class="kl-badge kl-${upd.knowledge_level}">${upd.knowledge_level}</span> &nbsp;·&nbsp; Trust: ${Math.round(upd.trust*100)}%</small>`;
+  } catch(e){}
+}
+
+// close detective overlay on Escape (but not stats drawer which uses same key)
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape' && document.getElementById('detectiveOverlay').classList.contains('open'))
+    closeDetective();
+});
 
 // ══════════════════════════════════════════════
 //  INIT
