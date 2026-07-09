@@ -435,6 +435,8 @@ svg#graph{width:100%;height:100%;}
 .rm-path-area svg{display:block;}
 /* zoom buttons overlay */
 .rm-pc-zoom-btns{position:absolute;bottom:14px;right:14px;z-index:10;display:flex;flex-direction:column;gap:4px;}
+.rm-clear-path-btn{position:absolute;top:14px;left:14px;z-index:10;background:rgba(13,17,23,.85);border:1px solid rgba(247,129,102,.5);color:#f78166;padding:5px 13px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;backdrop-filter:blur(4px);}
+.rm-clear-path-btn:hover{background:rgba(247,129,102,.15);border-color:#f78166;}
 .rm-pc-zoom-btns button{width:28px;height:28px;border-radius:6px;border:1px solid rgba(88,166,255,.3);background:rgba(13,17,23,.85);color:#8b949e;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:1;}
 .rm-pc-zoom-btns button:hover{border-color:var(--accent);color:var(--accent);}
 /* floating tooltip shown on node hover */
@@ -688,6 +690,7 @@ svg#graph{width:100%;height:100%;}
           <button onclick="rmPcZoom(0.8)">−</button>
           <button onclick="rmPcZoomFit()" title="Reset">⊡</button>
         </div>
+        <button class="rm-clear-path-btn" id="rmClearPathBtn" onclick="rmClearSelection()" style="display:none">✕ Clear path</button>
       </div>
 
       <!-- EMPTY STATE -->
@@ -727,7 +730,7 @@ svg#graph{width:100%;height:100%;}
       <div class="rm-det-resize" id="rmDetResize"></div>
       <div class="rm-det-hdr">
         <div class="rm-det-top">
-          <button class="rm-det-close" onclick="document.getElementById('rmDetail').classList.add('hidden');rmSel=null;if(rmViewMode==='path')_rmClearPathHighlight();" title="Close">×</button>
+          <button class="rm-det-close" onclick="rmClearSelection()" title="Close">×</button>
           <div class="rm-concept-name" id="rmConceptName">—</div>
           <button class="rm-expand-btn" id="rmExpandBtn" onclick="rmExpandNode()">⊕ Expand</button>
           <button class="rm-gen-card-btn" id="rmLoadCardBtn" onclick="rmLoadCard()">✦ AI Card</button>
@@ -2848,10 +2851,12 @@ const _PC_COLORS = [
 
 function _rmRenderPath(){
   const area = document.getElementById('rmPathArea');
-  // Clear SVG but keep the zoom buttons div
+  // Clear SVG but keep persistent overlay elements
   const zoomBtns = document.getElementById('rmPcZoomBtns');
+  const clearBtn = document.getElementById('rmClearPathBtn');
   area.innerHTML = '';
   if(zoomBtns) area.appendChild(zoomBtns);
+  if(clearBtn) area.appendChild(clearBtn);
   document.getElementById('rmPcZoomBtns').style.display = 'flex';
 
   const tip = document.getElementById('rmPcTip');
@@ -2874,7 +2879,7 @@ function _rmRenderPath(){
   const NS = 'http://www.w3.org/2000/svg';
   const VW = area.clientWidth  || 900;  // visible viewport
   const VH = area.clientHeight || 600;
-  const MT = 46, MB = 24, ML = 70, MR = 70, NR = 5;
+  const MT = 72, MB = 24, ML = 70, MR = 70, NR = 5;
   const MIN_GAP = 200; // px between axes
 
   // Natural content width — may exceed viewport (pan to see)
@@ -2924,25 +2929,44 @@ function _rmRenderPath(){
     tr.setAttribute('width', 2); tr.setAttribute('height', svgH - MT - MB);
     tr.setAttribute('fill', col); tr.setAttribute('fill-opacity', '0.16');
     cg.appendChild(tr);
-    // pill badge header
-    const label = sec.length > 16 ? sec.slice(0,15)+'…' : sec;
-    const bW = Math.max(52, label.length * 6.2 + 22);
+    // pill badge header — word-wrap into ≤4 lines, no truncation
+    const words = sec.split(/\s+/);
+    const lines = [];
+    let cur = '';
+    for(const w of words){
+      if(!cur){ cur = w; }
+      else if((cur + ' ' + w).length <= 13){ cur += ' ' + w; }
+      else{ lines.push(cur); cur = w; }
+      if(lines.length === 3){ cur = words.slice(words.indexOf(w) + (cur===w?0:1)).join(' '); break; }
+    }
+    if(cur) lines.push(cur);
+    const LH = 11, PAD = 10;
+    const bH = lines.length * LH + PAD;
+    const bW = Math.max(54, Math.max(...lines.map(l => l.length)) * 6.0 + 20);
+    const pillY = MT - bH - 4;
     const pill = document.createElementNS(NS, 'rect');
-    pill.setAttribute('x', x - bW/2); pill.setAttribute('y', 7);
-    pill.setAttribute('width', bW);   pill.setAttribute('height', 22);
-    pill.setAttribute('rx', '11');
+    pill.setAttribute('x', x - bW/2); pill.setAttribute('y', pillY);
+    pill.setAttribute('width', bW);   pill.setAttribute('height', bH);
+    pill.setAttribute('rx', String(Math.min(11, bH/2)));
     pill.setAttribute('fill', col);   pill.setAttribute('fill-opacity', '0.18');
     pill.setAttribute('stroke', col); pill.setAttribute('stroke-opacity', '0.55');
     pill.setAttribute('stroke-width', '1'); pill.setAttribute('pointer-events','none');
     cg.appendChild(pill);
     const lb = document.createElementNS(NS, 'text');
-    lb.setAttribute('x', x); lb.setAttribute('y', '21');
-    lb.setAttribute('text-anchor','middle'); lb.setAttribute('dominant-baseline','middle');
-    lb.setAttribute('fill', col);  lb.setAttribute('fill-opacity','1');
+    lb.setAttribute('x', x); lb.setAttribute('y', String(pillY + PAD/2 + 1));
+    lb.setAttribute('text-anchor','middle');
+    lb.setAttribute('fill', col); lb.setAttribute('fill-opacity','1');
     lb.setAttribute('font-size','8.5'); lb.setAttribute('font-weight','700');
-    lb.setAttribute('font-family','Inter,sans-serif'); lb.setAttribute('letter-spacing','0.7');
+    lb.setAttribute('font-family','Inter,sans-serif'); lb.setAttribute('letter-spacing','0.6');
     lb.setAttribute('pointer-events','none');
-    lb.textContent = label.toUpperCase();
+    lines.forEach((line, li) => {
+      const ts = document.createElementNS(NS, 'tspan');
+      ts.setAttribute('x', x);
+      ts.setAttribute('dy', li === 0 ? '0' : LH + 'px');
+      ts.setAttribute('dominant-baseline', 'hanging');
+      ts.textContent = line.toUpperCase();
+      lb.appendChild(ts);
+    });
     cg.appendChild(lb);
   });
 
@@ -3058,7 +3082,10 @@ function _rmRenderPath(){
   d3.select(svg).on('dblclick.zoom', null); // disable dblclick zoom
 
   // If a node was already selected, apply path highlight immediately
-  if(rmSel) _rmHighlightPath(rmSel.id);
+  if(rmSel){
+    _rmHighlightPath(rmSel.id);
+    document.getElementById('rmClearPathBtn').style.display = 'block';
+  }
 }
 
 // BFS backwards: collect only ancestors (prerequisite chain) leading to startId
@@ -3106,7 +3133,14 @@ function _rmHighlightPath(nodeId){
   });
 }
 
+function rmClearSelection(){
+  document.getElementById('rmDetail').classList.add('hidden');
+  rmSel = null;
+  _rmClearPathHighlight();
+}
+
 function _rmClearPathHighlight(){
+  document.getElementById('rmClearPathBtn').style.display = 'none';
   _rmPathLinks.forEach(le => {
     le.glow.setAttribute('stroke-opacity','0.16'); le.glow.setAttribute('stroke-width','2.5');
     le.sharp.setAttribute('stroke-opacity','0.26'); le.sharp.setAttribute('stroke-width','1.2');
@@ -3174,7 +3208,10 @@ function _rmMoveTip(e){
 
 function rmSelectNode(datum){
   rmSel = datum;
-  if(rmViewMode === 'path') _rmHighlightPath(datum.id);
+  if(rmViewMode === 'path'){
+    _rmHighlightPath(datum.id);
+    document.getElementById('rmClearPathBtn').style.display = 'block';
+  }
   document.getElementById('rmDetail').classList.remove('hidden');
   document.getElementById('rmConceptName').textContent = datum.name;
 
