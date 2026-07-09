@@ -1224,12 +1224,12 @@ def _save_roadmap_batch(db, tech_id: str, nodes: list, links: list,
         nid = f"{tech_id}_{n['id']}"
         db.execute("""
             INSERT OR IGNORE INTO rm_nodes
-                (id, tech_id, name, category, section, difficulty, estimated_minutes, priority)
-            VALUES (?,?,?,?,?,?,?,?)
+                (id, tech_id, name, category, section, difficulty, priority)
+            VALUES (?,?,?,?,?,?,?)
         """, (nid, tech_id, n.get("name", ""), n.get("category", "fundamentals"),
               n.get("section", default_section),
               max(1, min(5, int(n.get("difficulty", 1)))),
-              int(n.get("estimated_minutes", 30)), offset + i))
+              offset + i))
     for l in links:
         rs, rt = l.get("source", ""), l.get("target", "")
         if rs in all_valid_ids and rt in all_valid_ids and rs != rt:
@@ -1246,7 +1246,7 @@ _ROADMAP_JSON_SCHEMA = """{
   "nodes": [
     {{"id": "snake_case_id", "name": "Human Readable Name",
       "section": "Section Name 1", "category": "fundamentals",
-      "difficulty": 1, "estimated_minutes": 20}}
+      "difficulty": 1}}
   ],
   "links": [
     {{"source": "node_id", "target": "node_id", "type": "prerequisite"}}
@@ -1296,7 +1296,6 @@ Rules:
 - name: human-readable (1-4 words)
 - category: one of: fundamentals, oop, web, data, testing, tooling, advanced
 - difficulty: 1 (beginner) to 5 (expert)
-- estimated_minutes: 15-90
 - links: prerequisite relationships only (direct dependencies)
 - All source/target IDs must match node IDs in this same response
 - No duplicate IDs"""
@@ -1326,7 +1325,7 @@ Rules:
         if not existing_list:
             raise HTTPException(400, "Run phase 1 first (expand=false)")
 
-        existing_sections = json.loads(tech.get("sections") or "[]") if tech else []
+        existing_sections = json.loads(tech["sections"] or "[]") if tech else []
         sections_hint = (
             f"Use these existing sections (assign each new node to one): {existing_sections}"
             if existing_sections else
@@ -1353,7 +1352,6 @@ Rules:
 - section: assign to one of the existing sections listed above
 - category: one of: fundamentals, oop, web, data, testing, tooling, advanced
 - difficulty: 1-5
-- estimated_minutes: 15-90
 - links: prerequisite relationships between the NEW nodes only
 - All source/target IDs must match IDs in THIS response only"""
 
@@ -1439,7 +1437,7 @@ Each sub-topic must be a concrete technique, pattern, or sub-feature of "{concep
 Return ONLY valid JSON, no markdown, no code blocks:
 {{
   "nodes": [
-    {{"id": "unique_snake_case", "name": "Short Human Name", "category": "fundamentals|oop|web|data|testing|tooling|advanced", "difficulty": 1, "estimated_minutes": 30}}
+    {{"id": "unique_snake_case", "name": "Short Human Name", "category": "fundamentals|oop|web|data|testing|tooling|advanced", "difficulty": 1}}
   ],
   "links": [
     {{"source": "source_short_id", "target": "target_short_id", "type": "prerequisite"}}
@@ -1451,7 +1449,7 @@ Rules:
 - Also add links between new nodes when one depends on another
 - Also add links from new nodes TO existing concepts when relevant (use their IDs above)
 - DO NOT reuse these IDs (already exist): {', '.join(sorted(existing_short_ids))}
-- difficulty 1-5, estimated_minutes 15-90
+- difficulty 1-5
 - No duplicate IDs in this response"""
 
     raw = await _stream_collect(prompt)
@@ -1463,9 +1461,33 @@ Rules:
     all_valid_ids = new_short_ids | existing_short_ids   # links to existing nodes are valid
 
     with get_db() as db:
+        # Expanded children belong in their own section named after the parent node.
+        # Also ensure this section is added to the technology's ordered section list.
+        existing_sections = json.loads(tech["sections"] or "[]")
+        if concept_name not in existing_sections:
+            # Insert right after the parent's section so columns stay in learning order
+            parent_sec = node["section"] or ""
+            try:
+                insert_at = existing_sections.index(parent_sec) + 1
+            except ValueError:
+                insert_at = len(existing_sections)
+            existing_sections.insert(insert_at, concept_name)
+
         _save_roadmap_batch(db, tech_id, nodes, links, all_valid_ids,
                             offset=max_priority + 1,
-                            default_section=node["section"] or "")
+                            sections=existing_sections,
+                            default_section=concept_name)
+
+        # Fix section for any already-existing direct children that inherited the
+        # wrong section (e.g. from a previous expand before this bug was fixed).
+        db.execute(
+            """UPDATE rm_nodes SET section=?
+               WHERE id IN (
+                   SELECT target FROM rm_links WHERE source=?
+               ) AND tech_id=? AND section != ?""",
+            (concept_name, node_id, tech_id, concept_name)
+        )
+
         # Guarantee parent → every new child link exists even if LLM missed it
         for n in nodes:
             db.execute(
@@ -1474,6 +1496,64 @@ Rules:
             )
 
     return {"ok": True, "new_nodes": len(nodes), "new_links": len(links)}
+
+
+@app.post("/api/roadmap/{tech_id}/fix-sections")
+def roadmap_fix_sections(tech_id: str):
+    """
+    Retroactively fix section assignments: any node whose direct children share
+    its own section gets those children moved into a section named after the node.
+    Fixes data created before the expand-section bug was patched.
+    """
+    with get_db() as db:
+        tech = db.execute("SELECT * FROM rm_technologies WHERE id=?", (tech_id,)).fetchone()
+        if not tech:
+            raise HTTPException(404, "Technology not found")
+
+        nodes = db.execute("SELECT * FROM rm_nodes WHERE tech_id=?", (tech_id,)).fetchall()
+        links = db.execute(
+            "SELECT source, target FROM rm_links WHERE source LIKE ?", (f"{tech_id}_%",)
+        ).fetchall()
+
+        node_map = {n["id"]: n for n in nodes}
+        children_of = {}
+        for l in links:
+            children_of.setdefault(l["source"], []).append(l["target"])
+
+        existing_sections = json.loads(tech["sections"] or "[]")
+        updated = 0
+
+        for parent_id, child_ids in children_of.items():
+            parent = node_map.get(parent_id)
+            if not parent:
+                continue
+            parent_sec = parent["section"] or ""
+            parent_name = parent["name"]
+            if parent_name == parent_sec:
+                continue  # already its own section
+
+            # Children that share the parent's section (wrong placement)
+            wrong = [cid for cid in child_ids
+                     if node_map.get(cid) and node_map[cid]["section"] == parent_sec]
+            if not wrong:
+                continue
+
+            # Add parent name as a new section right after its current section
+            if parent_name not in existing_sections:
+                try:
+                    idx = existing_sections.index(parent_sec) + 1
+                except ValueError:
+                    idx = len(existing_sections)
+                existing_sections.insert(idx, parent_name)
+
+            for cid in wrong:
+                db.execute("UPDATE rm_nodes SET section=? WHERE id=?", (parent_name, cid))
+                updated += 1
+
+        db.execute("UPDATE rm_technologies SET sections=? WHERE id=?",
+                   (json.dumps(existing_sections), tech_id))
+
+    return {"ok": True, "nodes_updated": updated, "sections": existing_sections}
 
 
 @app.patch("/api/roadmap/nodes/{node_id}/status")

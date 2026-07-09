@@ -478,7 +478,6 @@ svg#graph{width:100%;height:100%;}
 .rm-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
 .rm-cat-badge{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:2px 7px;border-radius:10px;border:1px solid;font-family:'JetBrains Mono',monospace;}
 .rm-diff{font-size:11px;color:var(--yellow);letter-spacing:2px;}
-.rm-time{font-size:11px;color:var(--muted);}
 /* status stepper — one row, top-border active indicator */
 .rm-status-bar{display:flex;align-items:stretch;border-top:1px solid var(--border);}
 .rm-stat-btn{flex:1;border:none;border-top:2px solid transparent;background:transparent;color:var(--muted);padding:7px 2px 6px;font-size:8px;cursor:pointer;transition:all .15s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1;}
@@ -2633,6 +2632,8 @@ async function rmClearFocus(){
 
 async function rmLoadGraph(){
   try{
+    // Fix any legacy section assignments before loading (idempotent, fast)
+    await fetch(`${API}/api/roadmap/${rmTech}/fix-sections`, {method:'POST'}).catch(()=>{});
     const r    = await fetch(`${API}/api/roadmap/${rmTech}/graph`);
     const data = await r.json();
     rmNodes    = data.nodes    || [];
@@ -2789,12 +2790,21 @@ function _rmRenderGraph(){
     .filter(l=>nodeMap[l.source]&&nodeMap[l.target])
     .map(l=>({...l}));
 
+  // Left-to-right column positions by section index
+  const secCount = Math.max(rmSections.length, 1);
+  const _rmSecX = d => {
+    const idx = rmSections.indexOf(d.section);
+    const frac = idx === -1 ? 0.5 : idx / (secCount - 1 || 1);
+    return W * 0.08 + frac * W * 0.84;
+  };
+
   if(rmSimInst) rmSimInst.stop();
   rmSimInst = d3.forceSimulation(simNodes)
     .force('link', d3.forceLink(simLinks).id(d=>d.id).distance(90).strength(0.4))
     .force('charge', d3.forceManyBody().strength(-220))
     .force('center', d3.forceCenter(W/2, H/2))
-    .force('collision', d3.forceCollide(d=>12+d.difficulty*2+2));
+    .force('collision', d3.forceCollide(d=>12+d.difficulty*2+2))
+    .force('x', d3.forceX(d=>_rmSecX(d)).strength(0.35));
 
   const link = g.selectAll('.rm-link').data(simLinks).enter().append('line')
     .attr('class','rm-link')
@@ -3041,7 +3051,7 @@ function _rmRenderPath(){
     // Hover (direct connections only)
     g.addEventListener('mouseenter', e => {
       const diff = '●'.repeat(n.difficulty||1)+'○'.repeat(5-(n.difficulty||1));
-      tip.innerHTML = `<b>${_escHtml(n.name)}</b><span>${diff} · ⏱ ${n.estimated_minutes||30}m</span>`;
+      tip.innerHTML = `<b>${_escHtml(n.name)}</b><span>${diff}</span>`;
       tip.style.display='block'; _rmMoveTip(e);
       if(rmSel) return; // tooltip updates but highlight stays for selected path
       ring.setAttribute('fill-opacity','0.28'); circle.setAttribute('r', NR+2);
@@ -3219,8 +3229,7 @@ function rmSelectNode(datum){
   const stars = '★'.repeat(datum.difficulty||1)+'☆'.repeat(5-(datum.difficulty||1));
   document.getElementById('rmMeta').innerHTML =
     `<span class="rm-cat-badge" style="color:${col};border-color:${col}">${datum.category||'fundamentals'}</span>
-     <span class="rm-diff">${stars}</span>
-     <span class="rm-time">~${datum.estimated_minutes||30} min</span>`;
+     <span class="rm-diff">${stars}</span>`;
 
   _rmRenderStatusBar(datum.id, datum.status||'not_started');
 
