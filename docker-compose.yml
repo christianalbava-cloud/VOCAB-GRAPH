@@ -1,0 +1,65 @@
+services:
+
+  # ── Ollama LLM server ──────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: vocabgraph-ollama
+    entrypoint: ["/bin/sh", "/init/ollama-init.sh"]
+    environment:
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5-coder:7b}
+    # Port not exposed to host — app talks to ollama over the internal vocabnet
+    # Uncomment the line below if you want to access Ollama from the host:
+    # ports:
+    #   - "11435:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+      - ./docker:/init:ro
+    healthcheck:
+      # healthy only after the model is fully downloaded and listed
+      test: ["CMD-SHELL", "ollama list 2>/dev/null | grep -q 'qwen2.5-coder' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 40        # model pull can take several minutes
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - vocabnet
+    # ── Uncomment for NVIDIA GPU ──
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # ── FastAPI app ────────────────────────────────────────────────
+  app:
+    build: .
+    container_name: vocabgraph-app
+    ports:
+      - "8000:8000"
+    environment:
+      - LLM_PROVIDER=ollama
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5-coder:7b}
+      - DB_PATH=/data/vocabgraph.db
+      # Optional Groq fallback — set LLM_PROVIDER=groq to use
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
+    volumes:
+      - ./data:/data
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - vocabnet
+
+volumes:
+  ollama_models:
+    name: vocabgraph-ollama-models
+
+networks:
+  vocabnet:
+    driver: bridge
