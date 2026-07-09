@@ -394,6 +394,149 @@ svg#graph{width:100%;height:100%;}
 .concept-img{width:100%;border-radius:8px;border:1px solid var(--border);display:block;object-fit:cover;max-height:220px;}
 .img-caption{font-size:11px;color:var(--muted);text-align:center;margin-top:5px;line-height:1.5;}
 .img-wrap{margin-top:2px;margin-bottom:4px;}
+
+/* KNOWLEDGE ROADMAP OVERLAY */
+.rm-overlay{display:none;position:fixed;inset:0;z-index:500;background:var(--bg);flex-direction:column;}
+.rm-overlay.open{display:flex;}
+.rm-hdr{display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;flex-wrap:wrap;}
+.rm-title{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);letter-spacing:1.5px;white-space:nowrap;}
+.rm-tech-tabs{display:flex;gap:5px;}
+.rm-tech-tab{background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 14px;border-radius:20px;font-size:12px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.rm-tech-tab.on{border-color:var(--accent);color:var(--accent);background:rgba(88,166,255,.1);}
+.rm-progress{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+.rm-regen-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.rm-regen-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+.rm-regen-btn.armed{border-color:#f78166;color:#f78166;background:rgba(247,129,102,.1);}
+.rm-regen-btn:disabled{opacity:.45;cursor:default;}
+.rm-gen-status{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.rm-gen-status .spin{width:11px;height:11px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+.rm-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;margin-left:auto;padding:0 4px;}
+.rm-close:hover{color:var(--text);}
+/* focus bar */
+.rm-focus-bar{display:none;align-items:center;gap:10px;padding:6px 20px;border-bottom:1px solid var(--border);background:rgba(88,166,255,.04);flex-shrink:0;flex-wrap:wrap;}
+.rm-focus-lbl{font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;white-space:nowrap;}
+.rm-focus-tag{display:inline-flex;align-items:center;gap:5px;background:rgba(88,166,255,.13);border:1px solid rgba(88,166,255,.35);color:#58a6ff;padding:3px 10px 3px 10px;border-radius:14px;font-size:11px;font-weight:500;}
+.rm-focus-tag-x{background:none;border:none;color:rgba(88,166,255,.7);cursor:pointer;font-size:14px;line-height:1;padding:0 0 0 4px;display:flex;align-items:center;}
+.rm-focus-tag-x:hover{color:#58a6ff;}
+.rm-focus-add-btn{font-size:10px;color:var(--muted);background:none;border:1px dashed var(--border);border-radius:12px;padding:3px 10px;cursor:pointer;transition:all .15s;}
+.rm-focus-add-btn:hover{color:var(--accent);border-color:rgba(88,166,255,.5);}
+.rm-focus-editor{display:none;align-items:center;gap:7px;}
+.rm-focus-input{background:var(--bg);border:1px solid var(--accent);border-radius:7px;padding:4px 10px;color:var(--text);font-size:11.5px;outline:none;width:260px;}
+.rm-focus-save-btn{background:var(--accent);border:none;color:#000;padding:4px 12px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;}
+.rm-focus-save-btn:hover{opacity:.88;}
+.rm-focus-cancel-btn{background:none;border:none;color:var(--muted);font-size:10px;cursor:pointer;padding:4px 6px;}
+.rm-focus-cancel-btn:hover{color:var(--text);}
+/* view toggle */
+.rm-view-toggle{display:none;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg);flex-shrink:0;}
+.rm-view-btn{padding:4px 11px;font-size:10px;border:none;background:none;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;}
+.rm-view-btn.on{background:var(--accent);color:#000;font-weight:700;}
+/* path view */
+.rm-path-area{display:none;position:absolute;inset:0;overflow:hidden;background:#080d13;}
+.rm-path-area svg{display:block;}
+/* zoom buttons overlay */
+.rm-pc-zoom-btns{position:absolute;bottom:14px;right:14px;z-index:10;display:flex;flex-direction:column;gap:4px;}
+.rm-pc-zoom-btns button{width:28px;height:28px;border-radius:6px;border:1px solid rgba(88,166,255,.3);background:rgba(13,17,23,.85);color:#8b949e;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:1;}
+.rm-pc-zoom-btns button:hover{border-color:var(--accent);color:var(--accent);}
+/* floating tooltip shown on node hover */
+.rm-pc-tip{position:fixed;pointer-events:none;background:rgba(13,17,23,.92);border:1px solid rgba(88,166,255,.35);border-radius:8px;padding:7px 11px;font-size:11.5px;color:#e6edf3;z-index:600;display:none;max-width:220px;line-height:1.45;}
+.rm-pc-tip b{display:block;font-weight:600;margin-bottom:2px;}
+.rm-pc-tip span{font-size:10px;color:#8b949e;}
+.rm-body{flex:1;display:flex;overflow:hidden;position:relative;}
+.rm-graph-area{flex:1;position:relative;overflow:hidden;}
+#rmGraph{width:100%;height:100%;}
+.rm-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--muted);text-align:center;padding:20px;}
+.rm-empty-title{font-size:18px;font-weight:600;color:var(--text);}
+.rm-empty-desc{font-size:13px;line-height:1.75;max-width:380px;}
+.rm-gen-big{background:var(--accent);color:#0d1117;border:none;padding:12px 30px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .2s;}
+.rm-gen-big:hover{opacity:.85;}
+.rm-gen-big:disabled{opacity:.35;cursor:default;}
+.rm-generating{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;}
+.rm-legend{position:absolute;bottom:14px;left:14px;background:rgba(13,17,23,.88);border:1px solid var(--border);border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:4px;}
+.rm-leg-sec{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-top:4px;}
+.rm-leg-sec:first-child{margin-top:0;}
+.rm-leg-row{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--muted);}
+.rm-leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.rm-leg-circ{width:8px;height:8px;border-radius:50%;border:2px solid;flex-shrink:0;}
+/* NODE DETAIL PANEL — floating overlay on the right */
+.rm-detail{position:absolute;right:0;top:0;bottom:0;width:360px;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:transform .25s;z-index:20;box-shadow:-6px 0 28px rgba(0,0,0,.45);}
+.rm-detail.hidden{transform:translateX(100%);pointer-events:none;}
+/* header */
+.rm-det-hdr{padding:12px 14px 0;flex-shrink:0;}
+.rm-det-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.rm-det-close{background:none;border:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0;}
+.rm-det-close:hover{color:var(--text);}
+.rm-concept-name{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent);font-weight:700;flex:1;overflow:hidden;word-break:break-word;line-height:1.3;}
+.rm-gen-card-btn{background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.3);color:#58a6ff;padding:3px 9px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0;}
+.rm-gen-card-btn:hover:not(:disabled){background:rgba(88,166,255,.22);border-color:rgba(88,166,255,.7);}
+.rm-gen-card-btn:disabled{opacity:.4;cursor:default;}
+.rm-expand-btn{background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);color:#3fb950;padding:3px 9px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0;}
+.rm-expand-btn:hover:not(:disabled){background:rgba(63,185,80,.22);border-color:#3fb950;}
+.rm-expand-btn:disabled{opacity:.4;cursor:default;}
+/* meta row */
+.rm-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.rm-cat-badge{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:2px 7px;border-radius:10px;border:1px solid;font-family:'JetBrains Mono',monospace;}
+.rm-diff{font-size:11px;color:var(--yellow);letter-spacing:2px;}
+.rm-time{font-size:11px;color:var(--muted);}
+/* status stepper — one row, top-border active indicator */
+.rm-status-bar{display:flex;align-items:stretch;border-top:1px solid var(--border);}
+.rm-stat-btn{flex:1;border:none;border-top:2px solid transparent;background:transparent;color:var(--muted);padding:7px 2px 6px;font-size:8px;cursor:pointer;transition:all .15s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1;}
+.rm-stat-btn .se{font-size:13px;}
+.rm-stat-btn.on{color:var(--text);border-top-color:var(--accent);background:rgba(88,166,255,.05);}
+.rm-stat-btn:hover:not(.on){background:rgba(255,255,255,.04);color:var(--text);}
+/* resize handle on left edge of detail panel */
+.rm-det-resize{position:absolute;left:0;top:0;bottom:0;width:5px;cursor:col-resize;z-index:2;}
+.rm-det-resize::after{content:'';position:absolute;left:2px;top:0;bottom:0;width:1px;background:var(--accent);opacity:0;transition:opacity .15s;}
+.rm-det-resize:hover::after,.rm-det-resize.dragging::after{opacity:.7;}
+/* body */
+.rm-det-body{flex:1;overflow-y:auto;padding:12px;}
+.rm-card-placeholder{color:var(--muted);font-size:12px;text-align:center;padding:28px 14px;border:1px dashed var(--border);border-radius:10px;line-height:1.7;margin-bottom:12px;}
+.rm-card-stream{margin-bottom:12px;}
+/* section cards */
+.rm-sec-card{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;}
+.rm-sec-card-hdr{display:flex;align-items:center;gap:7px;padding:8px 12px;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;}
+.rm-sec-card-hdr .si{font-size:15px;line-height:1;}
+.rm-sec-card-body{padding:10px 13px;font-size:12.5px;line-height:1.72;color:var(--text);}
+.rm-sec-card-body p{margin:0 0 5px;}
+.rm-sec-card-body p:last-child{margin-bottom:0;}
+.rm-sec-card-body ul{margin:2px 0 0;padding-left:17px;}
+.rm-sec-card-body li{margin-bottom:5px;}
+.rm-sec-card-body li:last-child{margin-bottom:0;}
+.rm-sec-card-body strong{font-weight:600;color:var(--text);}
+.rm-inline-code{font-family:'JetBrains Mono',monospace;font-size:10.5px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.1);padding:1px 5px;border-radius:4px;color:#e6edf3;}
+/* code block inside card */
+.rm-code-block{border-radius:7px;overflow:hidden;border:1px solid rgba(255,255,255,.08);margin-top:6px;}
+.rm-code-lang{font-size:9px;color:var(--muted);padding:4px 12px;border-bottom:1px solid rgba(255,255,255,.08);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.07em;background:rgba(255,255,255,.04);}
+.rm-code{font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.65;padding:11px 13px;overflow-x:auto;white-space:pre;color:#e6edf3;margin:0;background:rgba(0,0,0,.35);display:block;}
+/* legend */
+.rm-leg-cat{width:30px;height:8px;border-radius:3px;flex-shrink:0;}
+.rm-leg-status-circ{width:12px;height:12px;border-radius:50%;border:2px solid;flex-shrink:0;}
+/* notes */
+.rm-notes-wrap{border-top:1px solid var(--border);padding-top:12px;}
+.rm-notes-lbl{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.rm-notes-ta{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;font-family:'Inter',sans-serif;resize:vertical;min-height:80px;outline:none;line-height:1.6;}
+.rm-notes-ta:focus{border-color:var(--accent);}
+
+/* ── RIGHT-CLICK CONTEXT MENU ─────────────────────────────── */
+.ctx-menu{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:9px;box-shadow:0 6px 24px rgba(0,0,0,.55);z-index:900;min-width:178px;overflow:hidden;padding:4px 0;display:none;}
+.ctx-word{padding:6px 14px 6px;font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;border-bottom:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px;}
+.ctx-item{display:flex;align-items:center;gap:9px;padding:8px 14px;font-size:12.5px;color:var(--text);cursor:pointer;transition:background .1s;user-select:none;}
+.ctx-item:hover:not(.disabled){background:rgba(88,166,255,.1);color:var(--accent);}
+.ctx-item.disabled{color:var(--muted);cursor:default;}
+
+/* ── WORD POPUP ────────────────────────────────────────────── */
+.wp-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:901;display:none;}
+.word-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:500px;max-width:92vw;max-height:82vh;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 14px 52px rgba(0,0,0,.6);z-index:902;display:none;flex-direction:column;overflow:hidden;}
+.wp-hdr{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.wp-word{font-family:'JetBrains Mono',monospace;font-size:17px;color:var(--accent);font-weight:700;flex:1;}
+.wp-badge{font-size:9px;padding:2px 8px;border-radius:10px;border:1px solid;font-weight:700;font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+.wp-badge.isnew{color:#3fb950;border-color:rgba(63,185,80,.4);background:rgba(63,185,80,.1);}
+.wp-badge.exists{color:#e3b341;border-color:rgba(227,179,65,.4);background:rgba(227,179,65,.1);}
+.wp-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:0 3px;flex-shrink:0;}
+.wp-close:hover{color:var(--text);}
+.wp-body{flex:1;overflow-y:auto;padding:14px;}
+.wp-loading{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:12px;padding:30px 10px;}
+.wp-loading .spin{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+.wp-msg{font-size:12.5px;color:var(--muted);text-align:center;padding:24px 10px;}
 </style>
 </head>
 <body>
@@ -426,6 +569,7 @@ svg#graph{width:100%;height:100%;}
   <button class="hbtn" onclick="openStatsDrawer()">📊 Stats</button>
   <button class="hbtn" id="phraseModeBtn" onclick="togglePhraseMode()">🔗 Phrase Mode</button>
   <a class="hbtn" href="/graph3d.html" style="text-decoration:none">✦ 3D View</a>
+  <button class="hbtn" onclick="openRoadmap()">🗺 Roadmap</button>
   <button class="hbtn" onclick="openDetective()">🔍 Detective</button>
   <button class="hbtn" onclick="exportGraph()">⬇ Export</button>
   <button class="hbtn" onclick="openImportModal()">⬆ Import</button>
@@ -501,6 +645,110 @@ svg#graph{width:100%;height:100%;}
         <button class="pbb go" onclick="pbAnalyze()">✦ Analyze</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- KNOWLEDGE ROADMAP OVERLAY -->
+<div class="rm-overlay" id="rmOverlay">
+  <div class="rm-hdr">
+    <span class="rm-title">🗺 KNOWLEDGE ROADMAP</span>
+    <div class="rm-tech-tabs" id="rmTechTabs"></div>
+    <span class="rm-progress" id="rmProgress"></span>
+    <span class="rm-gen-status" id="rmGenStatus" style="display:none"></span>
+    <div class="rm-view-toggle" id="rmViewToggle">
+      <button class="rm-view-btn on" id="rmViewBtnGraph" onclick="rmSetView('graph')">⚡ Graph</button>
+      <button class="rm-view-btn"    id="rmViewBtnPath"  onclick="rmSetView('path')">▤ Path</button>
+    </div>
+    <button class="rm-regen-btn" id="rmRegenBtn" onclick="rmRegenClick(this)" style="display:none">↺ Regenerate</button>
+    <button class="rm-close" onclick="closeRoadmap()">×</button>
+  </div>
+
+  <!-- FOCUS BAR -->
+  <div class="rm-focus-bar" id="rmFocusBar">
+    <span class="rm-focus-lbl">🎯 Focus</span>
+    <div id="rmFocusDisplay"></div>
+    <div class="rm-focus-editor" id="rmFocusEditor">
+      <input class="rm-focus-input" id="rmFocusInput"
+             placeholder="e.g. backend, services, API endpoints…"
+             onkeydown="if(event.key==='Enter')rmSaveFocus();if(event.key==='Escape')rmCancelFocus()"/>
+      <button class="rm-focus-save-btn" onclick="rmSaveFocus()">Save</button>
+      <button class="rm-focus-cancel-btn" onclick="rmCancelFocus()">✕</button>
+    </div>
+  </div>
+
+  <div class="rm-body">
+
+    <!-- GRAPH AREA -->
+    <div class="rm-graph-area" id="rmGraphArea">
+      <svg id="rmGraph" style="display:none"></svg>
+      <!-- PATH (column) VIEW -->
+      <div class="rm-path-area" id="rmPathArea">
+        <div class="rm-pc-zoom-btns" id="rmPcZoomBtns" style="display:none">
+          <button onclick="rmPcZoom(1.25)">+</button>
+          <button onclick="rmPcZoom(0.8)">−</button>
+          <button onclick="rmPcZoomFit()" title="Reset">⊡</button>
+        </div>
+      </div>
+
+      <!-- EMPTY STATE -->
+      <div class="rm-empty" id="rmEmpty">
+        <div class="rm-empty-title">No roadmap yet</div>
+        <div class="rm-empty-desc">
+          Click <strong style="color:var(--accent)">Generate</strong> and the AI will build a
+          complete knowledge roadmap with concepts, prerequisites, and estimated study times.
+        </div>
+        <button class="rm-gen-big" id="rmGenBig" onclick="rmGenerateRoadmap(false)">✦ Generate Roadmap</button>
+        <div class="rm-generating" id="rmGenerating" style="display:none">
+          <div class="spin"></div><span>Generating roadmap…</span>
+        </div>
+      </div>
+
+      <!-- LEGEND -->
+      <div class="rm-legend" id="rmLegend" style="display:none">
+        <div class="rm-leg-sec">Node border · Category</div>
+        <div class="rm-leg-row"><div class="rm-leg-cat" style="background:#58a6ff"></div>Fundamentals</div>
+        <div class="rm-leg-row"><div class="rm-leg-cat" style="background:#d2a8ff"></div>OOP</div>
+        <div class="rm-leg-row"><div class="rm-leg-cat" style="background:#3fb950"></div>Web</div>
+        <div class="rm-leg-row"><div class="rm-leg-cat" style="background:#e3b341"></div>Data</div>
+        <div class="rm-leg-row"><div class="rm-leg-cat" style="background:#f78166"></div>Testing</div>
+        <div class="rm-leg-row"><div class="rm-leg-cat" style="background:#79c0ff"></div>Tooling</div>
+        <div class="rm-leg-row"><div class="rm-leg-cat" style="background:#ff7b72"></div>Advanced</div>
+        <div class="rm-leg-sec" style="margin-top:8px">Node fill · Status</div>
+        <div class="rm-leg-row"><div class="rm-leg-status-circ" style="border-color:#484f58;background:rgba(255,255,255,.04)"></div>Not started</div>
+        <div class="rm-leg-row"><div class="rm-leg-status-circ" style="border-color:#e3b341;background:rgba(227,179,65,.4)"></div>Studying</div>
+        <div class="rm-leg-row"><div class="rm-leg-status-circ" style="border-color:#3fb950;background:rgba(63,185,80,.45)"></div>Understood</div>
+        <div class="rm-leg-row"><div class="rm-leg-status-circ" style="border-color:#58a6ff;background:rgba(88,166,255,.45)"></div>Practiced</div>
+        <div class="rm-leg-row"><div class="rm-leg-status-circ" style="border-color:#f0c040;background:rgba(240,192,64,.5)"></div>Mastered ⭐</div>
+      </div>
+    </div>
+
+    <!-- CONCEPT DETAIL PANEL -->
+    <div class="rm-detail hidden" id="rmDetail">
+      <div class="rm-det-resize" id="rmDetResize"></div>
+      <div class="rm-det-hdr">
+        <div class="rm-det-top">
+          <button class="rm-det-close" onclick="document.getElementById('rmDetail').classList.add('hidden');rmSel=null;if(rmViewMode==='path')_rmClearPathHighlight();" title="Close">×</button>
+          <div class="rm-concept-name" id="rmConceptName">—</div>
+          <button class="rm-expand-btn" id="rmExpandBtn" onclick="rmExpandNode()">⊕ Expand</button>
+          <button class="rm-gen-card-btn" id="rmLoadCardBtn" onclick="rmLoadCard()">✦ AI Card</button>
+        </div>
+        <div class="rm-meta" id="rmMeta"></div>
+        <div class="rm-status-bar" id="rmStatusBar"></div>
+      </div>
+      <div class="rm-det-body">
+        <div class="rm-card-placeholder" id="rmCardPlaceholder">
+          Click <strong style="color:var(--accent)">✦ AI Card</strong> to generate<br>an explanation for this concept.
+        </div>
+        <div class="rm-card-stream" id="rmCardStream" style="display:none"></div>
+        <div class="rm-notes-wrap">
+          <div class="rm-notes-lbl">Personal notes</div>
+          <textarea class="rm-notes-ta" id="rmNotesTA"
+            placeholder="Your notes, code snippets, links…"
+            onblur="rmSaveNotes()"></textarea>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -2197,10 +2445,1130 @@ document.addEventListener('keydown', e => {
 });
 
 // ══════════════════════════════════════════════
+//  KNOWLEDGE ROADMAP
+// ══════════════════════════════════════════════
+
+const RM_TECHS = [
+  { id:'rubyonrails', name:'Ruby on Rails', emoji:'💎' },
+  { id:'csharp',      name:'C#',            emoji:'🔷' },
+];
+
+const RM_CAT_COLOR = {
+  fundamentals:'#58a6ff', oop:'#d2a8ff', web:'#3fb950',
+  data:'#e3b341', testing:'#f78166', tooling:'#79c0ff', advanced:'#ff7b72',
+};
+
+const RM_STATUS = {
+  not_started:{ emoji:'⚪', label:'Not started' },
+  studying:   { emoji:'🟡', label:'Studying' },
+  understood: { emoji:'🟢', label:'Understood' },
+  practiced:  { emoji:'🔵', label:'Practiced' },
+  mastered:   { emoji:'⭐', label:'Mastered' },
+};
+
+const RM_STATUS_FILL = {
+  not_started:'rgba(255,255,255,.04)',
+  studying:   'rgba(227,179,65,.25)',
+  understood: 'rgba(63,185,80,.3)',
+  practiced:  'rgba(88,166,255,.3)',
+  mastered:   'rgba(240,192,64,.35)',
+};
+
+const RM_STATUS_STROKE = {
+  not_started:'#484f58', studying:'#e3b341',
+  understood:'#3fb950', practiced:'#58a6ff', mastered:'#f0c040',
+};
+
+let rmTech      = null;   // active tech id
+let rmNodes     = [];
+let rmLinks     = [];
+let rmSections  = [];     // ordered section names from backend
+let rmSel       = null;   // selected node datum
+let rmSimInst   = null;
+let rmNodeSel   = null;   // d3 selection of node groups
+let rmFocusMap  = {};     // {techId: focusText}
+let rmViewMode    = 'graph'; // 'graph' | 'path'
+let _rmPathLinks  = [];      // [{glow,sharp,srcId,tgtId,col}]
+let _rmPathNodes  = new Map();// nodeId → {g,ring,circle,txt,catCol,isSel}
+let _rmPcZoomInst = null;
+
+async function openRoadmap(){
+  document.getElementById('rmOverlay').classList.add('open');
+  if(!rmTech){
+    // load focus values from technologies endpoint
+    try{
+      const r = await fetch(`${API}/api/roadmap/technologies`);
+      const d = await r.json();
+      (d.technologies||[]).forEach(t=>{ rmFocusMap[t.id] = t.focus||''; });
+    }catch(e){ console.error('Failed to load technologies', e); }
+    _rmBuildTabs();
+    rmSwitchTech(RM_TECHS[0].id);
+  }
+}
+
+function closeRoadmap(){
+  document.getElementById('rmOverlay').classList.remove('open');
+}
+
+function _rmBuildTabs(){
+  document.getElementById('rmTechTabs').innerHTML = RM_TECHS.map(t=>
+    `<button class="rm-tech-tab${rmTech===t.id?' on':''}" onclick="rmSwitchTech('${t.id}')">${t.emoji} ${t.name}</button>`
+  ).join('');
+}
+
+async function rmSwitchTech(techId){
+  rmTech = techId;
+  rmSel  = null;
+  document.getElementById('rmDetail').classList.add('hidden');
+  document.querySelectorAll('.rm-tech-tab').forEach((b,i)=>{
+    b.classList.toggle('on', RM_TECHS[i].id === techId);
+  });
+  _rmRenderFocusBar();
+  await rmLoadGraph();
+}
+
+function _rmFocusTags(){ return (rmFocusMap[rmTech]||'').split(',').map(t=>t.trim()).filter(Boolean); }
+
+function _rmRenderFocusBar(){
+  const bar     = document.getElementById('rmFocusBar');
+  const display = document.getElementById('rmFocusDisplay');
+  const editor  = document.getElementById('rmFocusEditor');
+  if(!rmTech){ bar.style.display='none'; return; }
+
+  bar.style.display    = 'flex';
+  editor.style.display = 'none';
+
+  const tags = _rmFocusTags();
+  const badges = tags.map((t,i) =>
+    `<span class="rm-focus-tag">${_escHtml(t)}
+       <button class="rm-focus-tag-x" onclick="rmRemoveFocusTag(${i})" title="Remove">×</button>
+     </span>`
+  ).join('');
+
+  const editBtn = tags.length
+    ? `<button class="rm-focus-add-btn" onclick="rmEditAllFocus()" title="Edit all">✏</button>`
+    : '';
+
+  display.innerHTML = badges
+    + editBtn
+    + `<button class="rm-focus-add-btn" onclick="rmAddFocus()">+ add</button>`;
+}
+
+let _rmFocusMode = 'add'; // 'add' | 'edit'
+
+function rmAddFocus(){
+  _rmFocusMode = 'add';
+  const editor = document.getElementById('rmFocusEditor');
+  const inp    = document.getElementById('rmFocusInput');
+  inp.placeholder = 'new focus term…';
+  inp.value = '';
+  editor.style.display = 'flex';
+  inp.focus();
+}
+
+function rmEditAllFocus(){
+  _rmFocusMode = 'edit';
+  const editor = document.getElementById('rmFocusEditor');
+  const inp    = document.getElementById('rmFocusInput');
+  inp.placeholder = 'services, core, endpoints…';
+  inp.value = _rmFocusTags().join(', ');
+  editor.style.display = 'flex';
+  inp.focus();
+}
+
+async function rmSaveFocus(){
+  const inp  = document.getElementById('rmFocusInput');
+  const val  = inp.value.trim();
+  if(!val){ _rmRenderFocusBar(); return; }
+
+  let tags = _rmFocusTags();
+  if(_rmFocusMode === 'add'){
+    // append new terms (user may type comma-separated)
+    val.split(',').map(t=>t.trim()).filter(Boolean).forEach(t=>{
+      if(!tags.includes(t)) tags.push(t);
+    });
+  } else {
+    tags = val.split(',').map(t=>t.trim()).filter(Boolean);
+  }
+
+  const focus = tags.join(', ');
+  rmFocusMap[rmTech] = focus;
+  try{
+    await fetch(`${API}/api/roadmap/technologies/${rmTech}/focus`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({focus}),
+    });
+  }catch(e){ console.error('Focus save failed', e); }
+  _rmRenderFocusBar();
+}
+
+function rmCancelFocus(){ _rmRenderFocusBar(); }
+
+async function rmRemoveFocusTag(idx){
+  const tags = _rmFocusTags().filter((_,i)=>i!==idx);
+  const focus = tags.join(', ');
+  rmFocusMap[rmTech] = focus;
+  try{
+    await fetch(`${API}/api/roadmap/technologies/${rmTech}/focus`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({focus}),
+    });
+  }catch(e){ console.error('Focus remove failed', e); }
+  _rmRenderFocusBar();
+}
+
+async function rmClearFocus(){
+  rmFocusMap[rmTech] = '';
+  try{
+    await fetch(`${API}/api/roadmap/technologies/${rmTech}/focus`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({focus:''}),
+    });
+  }catch(e){ console.error('Focus clear failed', e); }
+  _rmRenderFocusBar();
+}
+
+async function rmLoadGraph(){
+  try{
+    const r    = await fetch(`${API}/api/roadmap/${rmTech}/graph`);
+    const data = await r.json();
+    rmNodes    = data.nodes    || [];
+    rmLinks    = data.links    || [];
+    rmSections = data.sections || [];
+    if(rmNodes.length === 0){ _rmShowEmpty(true); }
+    else{ _rmShowEmpty(false); _rmRenderActive(); _rmUpdateProgress(); }
+  }catch(e){ console.error('Roadmap load error', e); }
+}
+
+function _rmRenderActive(){
+  if(rmViewMode === 'path') _rmRenderPath();
+  else                      _rmRenderGraph();
+}
+
+function _rmShowEmpty(show){
+  document.getElementById('rmEmpty').style.display      = show ? 'flex' : 'none';
+  document.getElementById('rmRegenBtn').style.display   = show ? 'none' : '';
+  document.getElementById('rmProgress').textContent     = '';
+  const toggle = document.getElementById('rmViewToggle');
+  toggle.style.display = show ? 'none' : 'flex';
+  if(show){
+    document.getElementById('rmGraph').style.display    = 'none';
+    document.getElementById('rmPathArea').style.display = 'none';
+    document.getElementById('rmLegend').style.display   = 'none';
+    document.getElementById('rmGenBig').style.display      = '';
+    document.getElementById('rmGenerating').style.display  = 'none';
+  } else {
+    _rmApplyViewDisplay();
+  }
+}
+
+function _rmApplyViewDisplay(){
+  const isGraph = rmViewMode === 'graph';
+  document.getElementById('rmGraph').style.display    = isGraph ? 'block' : 'none';
+  document.getElementById('rmLegend').style.display   = isGraph ? 'flex'  : 'none';
+  document.getElementById('rmPathArea').style.display = isGraph ? 'none'  : 'flex';
+  document.getElementById('rmViewBtnGraph').classList.toggle('on', isGraph);
+  document.getElementById('rmViewBtnPath').classList.toggle('on', !isGraph);
+}
+
+function rmSetView(mode){
+  rmViewMode = mode;
+  _rmApplyViewDisplay();
+  if(rmNodes.length > 0){
+    if(mode === 'path')  _rmRenderPath();
+    else                 _rmRenderGraph();
+  }
+}
+
+function _rmUpdateProgress(){
+  const mastered = rmNodes.filter(n=>n.status==='mastered').length;
+  const done     = rmNodes.filter(n=>n.status!=='not_started').length;
+  document.getElementById('rmProgress').textContent =
+    `${done}/${rmNodes.length} started · ${mastered} mastered`;
+}
+
+let _rmRegenArmed = false;
+let _rmRegenTimer = null;
+
+function rmRegenClick(btn){
+  // Two-click confirmation: first click arms the button, second click fires
+  if(!_rmRegenArmed){
+    _rmRegenArmed = true;
+    btn.classList.add('armed');
+    btn.textContent = '⚠ Confirm reset';
+    clearTimeout(_rmRegenTimer);
+    _rmRegenTimer = setTimeout(()=>{
+      _rmRegenArmed = false;
+      btn.classList.remove('armed');
+      btn.textContent = '↺ Regenerate';
+    }, 3000);
+    return;
+  }
+  // Second click — fire
+  clearTimeout(_rmRegenTimer);
+  _rmRegenArmed = false;
+  btn.classList.remove('armed');
+  btn.textContent = '↺ Regenerate';
+  rmGenerateRoadmap(true);
+}
+
+async function rmGenerateRoadmap(regenerate){
+  const genBig   = document.getElementById('rmGenBig');
+  const genSpinEl= document.getElementById('rmGenerating'); // inside empty state
+  const regenB   = document.getElementById('rmRegenBtn');
+  const statusEl = document.getElementById('rmGenStatus');
+
+  genBig.style.display = 'none';
+  if(regenB){ regenB.disabled = true; regenB.textContent = '…'; }
+
+  const _setMsg = txt => {
+    statusEl.style.display = 'flex';
+    statusEl.innerHTML = `<span class="spin"></span>${txt}`;
+    // also update the spinner inside empty state if visible
+    if(genSpinEl){ genSpinEl.style.display='flex'; const sp=genSpinEl.querySelector('span:last-child'); if(sp) sp.textContent=txt; }
+  };
+  const _hideMsg = () => {
+    statusEl.style.display = 'none';
+    if(genSpinEl) genSpinEl.style.display='none';
+  };
+
+  try{
+    // Phase 1 — core concepts (15-20 nodes)
+    _setMsg('Phase 1/2: Building core concepts…');
+    const r1 = await fetch(`${API}/api/roadmap/generate/${rmTech}`, {method:'POST'});
+    if(!r1.ok) throw new Error(await r1.text());
+    const d1 = await r1.json();
+
+    await rmLoadGraph();
+
+    // Phase 2 — advanced concepts (10-15 more nodes)
+    _setMsg(`Phase 2/2: Adding advanced concepts… (${d1.nodes} so far)`);
+    const r2 = await fetch(`${API}/api/roadmap/generate/${rmTech}?expand=true`, {method:'POST'});
+    if(!r2.ok) throw new Error(await r2.text());
+
+    await rmLoadGraph();
+
+  }catch(e){
+    statusEl.style.display = 'none';
+    statusEl.innerHTML = `⚠ ${_escHtml(String(e.message))}`;
+    statusEl.style.color = '#f78166';
+    statusEl.style.display = 'flex';
+    setTimeout(()=>{ statusEl.style.display='none'; statusEl.style.color=''; }, 5000);
+    genBig.style.display = '';
+  }finally{
+    _hideMsg();
+    if(regenB){ regenB.disabled = false; regenB.textContent = '↺ Regenerate'; }
+  }
+}
+
+function _rmRenderGraph(){
+  const area = document.getElementById('rmGraphArea');
+  const W = area.clientWidth, H = area.clientHeight;
+  const svgEl = document.getElementById('rmGraph');
+  svgEl.innerHTML = '';
+  svgEl.style.display = 'block';
+
+  const svg = d3.select('#rmGraph').attr('width', W).attr('height', H);
+
+  svg.append('defs').append('marker')
+    .attr('id','rm-arrow').attr('viewBox','0 -4 8 8')
+    .attr('refX',20).attr('refY',0)
+    .attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto')
+    .append('path').attr('d','M0,-4L8,0L0,4').attr('fill','#484f58');
+
+  const g    = svg.append('g');
+  const zoom = d3.zoom().scaleExtent([0.15,4]).on('zoom', e=>g.attr('transform',e.transform));
+  svg.call(zoom);
+
+  const nodeMap  = Object.fromEntries(rmNodes.map(n=>([n.id, {...n}])));
+  const simNodes = Object.values(nodeMap);
+  const simLinks = rmLinks
+    .filter(l=>nodeMap[l.source]&&nodeMap[l.target])
+    .map(l=>({...l}));
+
+  if(rmSimInst) rmSimInst.stop();
+  rmSimInst = d3.forceSimulation(simNodes)
+    .force('link', d3.forceLink(simLinks).id(d=>d.id).distance(90).strength(0.4))
+    .force('charge', d3.forceManyBody().strength(-220))
+    .force('center', d3.forceCenter(W/2, H/2))
+    .force('collision', d3.forceCollide(d=>12+d.difficulty*2+2));
+
+  const link = g.selectAll('.rm-link').data(simLinks).enter().append('line')
+    .attr('class','rm-link')
+    .attr('stroke', d=>d.type==='prerequisite' ? 'rgba(247,129,102,.3)' : 'rgba(88,166,255,.2)')
+    .attr('stroke-width',1.5)
+    .attr('marker-end','url(#rm-arrow)');
+
+  const node = g.selectAll('.rm-node').data(simNodes).enter().append('g')
+    .attr('class','rm-node').style('cursor','pointer')
+    .on('click',(evt,d)=>rmSelectNode(d))
+    .call(d3.drag()
+      .on('start',(evt,d)=>{ if(!evt.active) rmSimInst.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+      .on('drag', (evt,d)=>{ d.fx=evt.x; d.fy=evt.y; })
+      .on('end',  (evt,d)=>{ if(!evt.active) rmSimInst.alphaTarget(0); d.fx=null; d.fy=null; })
+    );
+
+  node.append('circle')
+    .attr('r',   d=>10+d.difficulty*2)
+    .attr('fill',d=>RM_STATUS_FILL[d.status||'not_started'])
+    .attr('stroke',d=>RM_CAT_COLOR[d.category]||'#58a6ff')
+    .attr('stroke-width',2);
+
+  node.append('text')
+    .attr('dy', d=>14+d.difficulty*2)
+    .attr('text-anchor','middle')
+    .attr('fill','#8b949e').attr('font-size','9px').attr('font-family','Inter,sans-serif')
+    .attr('pointer-events','none')
+    .text(d=>d.name.length>16 ? d.name.slice(0,15)+'…' : d.name);
+
+  rmSimInst.on('tick',()=>{
+    link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+        .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    node.attr('transform',d=>`translate(${d.x},${d.y})`);
+  });
+
+  rmNodeSel = node;
+}
+
+function _rmRefreshNodeColors(){
+  if(!rmNodeSel) return;
+  rmNodeSel.select('circle')
+    .attr('fill',   d=>RM_STATUS_FILL[d.status||'not_started'])
+    .attr('stroke', d=>RM_CAT_COLOR[d.category]||'#58a6ff');
+  if(rmViewMode === 'path') _rmRenderPath();
+}
+
+/* ── PATH (COLUMN) VIEW ───────────────────────────────────── */
+const _PATH_COL_COLORS = ['#58a6ff','#d2a8ff','#3fb950','#e3b341','#f78166','#79c0ff','#ffa657','#ff7b72'];
+
+const _PC_COLORS = [
+  '#58a6ff','#d2a8ff','#3fb950','#ffa657',
+  '#f78166','#79c0ff','#56d364','#e3b341',
+];
+
+function _rmRenderPath(){
+  const area = document.getElementById('rmPathArea');
+  // Clear SVG but keep the zoom buttons div
+  const zoomBtns = document.getElementById('rmPcZoomBtns');
+  area.innerHTML = '';
+  if(zoomBtns) area.appendChild(zoomBtns);
+  document.getElementById('rmPcZoomBtns').style.display = 'flex';
+
+  const tip = document.getElementById('rmPcTip');
+
+  // ── Section grouping ────────────────────────────────────────
+  let secNames = rmSections.length
+    ? [...rmSections]
+    : [...new Set(rmNodes.map(n => n.section || n.category || 'General'))];
+  const bySection = {};
+  secNames.forEach(s => bySection[s] = []);
+  rmNodes.forEach(n => {
+    const sec = n.section || n.category || 'General';
+    if(!bySection[sec]){ secNames.push(sec); bySection[sec] = []; }
+    bySection[sec].push(n);
+  });
+  secNames = secNames.filter(s => bySection[s]?.length > 0);
+  const N = secNames.length;
+  if(!N) return;
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const VW = area.clientWidth  || 900;  // visible viewport
+  const VH = area.clientHeight || 600;
+  const MT = 46, MB = 24, ML = 70, MR = 70, NR = 5;
+  const MIN_GAP = 200; // px between axes
+
+  // Natural content width — may exceed viewport (pan to see)
+  const contentW = ML + MR + (N === 1 ? 0 : (N - 1) * MIN_GAP);
+  const svgW = Math.max(VW, contentW);
+  const svgH = VH;
+
+  const axisX = secNames.map((_, i) =>
+    N === 1 ? svgW / 2 : ML + (i / (N - 1)) * (svgW - ML - MR)
+  );
+
+  const nodePos = {};
+  secNames.forEach((sec, ci) => {
+    bySection[sec].forEach((n, ni, arr) => {
+      nodePos[n.id] = { x: axisX[ci], y: MT + (ni + 1) * (svgH - MT - MB) / (arr.length + 1), ci };
+    });
+  });
+
+  // ── SVG ─────────────────────────────────────────────────────
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', VW); svg.setAttribute('height', VH);
+  svg.style.cssText = 'display:block;overflow:visible;width:100%;height:100%;position:absolute;inset:0;';
+
+  // Defs: glow filter
+  const defs = document.createElementNS(NS, 'defs');
+  const filt = document.createElementNS(NS, 'filter');
+  filt.setAttribute('id','pc-glow'); filt.setAttribute('x','-50%'); filt.setAttribute('y','-50%');
+  filt.setAttribute('width','200%'); filt.setAttribute('height','200%');
+  const bl = document.createElementNS(NS, 'feGaussianBlur');
+  bl.setAttribute('stdDeviation','3'); bl.setAttribute('result','b');
+  const mg = document.createElementNS(NS, 'feMerge');
+  ['b','SourceGraphic'].forEach(k => { const mn = document.createElementNS(NS,'feMergeNode'); mn.setAttribute('in',k); mg.appendChild(mn); });
+  filt.appendChild(bl); filt.appendChild(mg); defs.appendChild(filt);
+  svg.appendChild(defs);
+
+  // Zoomable content group — D3 zoom transforms this
+  const cg = document.createElementNS(NS, 'g');
+  cg.setAttribute('id', 'pcContent');
+  svg.appendChild(cg);
+
+  // ── Axes ─────────────────────────────────────────────────────
+  secNames.forEach((sec, ci) => {
+    const x = axisX[ci], col = _PC_COLORS[ci % _PC_COLORS.length];
+    // axis line
+    const tr = document.createElementNS(NS, 'rect');
+    tr.setAttribute('x', x-1); tr.setAttribute('y', MT);
+    tr.setAttribute('width', 2); tr.setAttribute('height', svgH - MT - MB);
+    tr.setAttribute('fill', col); tr.setAttribute('fill-opacity', '0.16');
+    cg.appendChild(tr);
+    // pill badge header
+    const label = sec.length > 16 ? sec.slice(0,15)+'…' : sec;
+    const bW = Math.max(52, label.length * 6.2 + 22);
+    const pill = document.createElementNS(NS, 'rect');
+    pill.setAttribute('x', x - bW/2); pill.setAttribute('y', 7);
+    pill.setAttribute('width', bW);   pill.setAttribute('height', 22);
+    pill.setAttribute('rx', '11');
+    pill.setAttribute('fill', col);   pill.setAttribute('fill-opacity', '0.18');
+    pill.setAttribute('stroke', col); pill.setAttribute('stroke-opacity', '0.55');
+    pill.setAttribute('stroke-width', '1'); pill.setAttribute('pointer-events','none');
+    cg.appendChild(pill);
+    const lb = document.createElementNS(NS, 'text');
+    lb.setAttribute('x', x); lb.setAttribute('y', '21');
+    lb.setAttribute('text-anchor','middle'); lb.setAttribute('dominant-baseline','middle');
+    lb.setAttribute('fill', col);  lb.setAttribute('fill-opacity','1');
+    lb.setAttribute('font-size','8.5'); lb.setAttribute('font-weight','700');
+    lb.setAttribute('font-family','Inter,sans-serif'); lb.setAttribute('letter-spacing','0.7');
+    lb.setAttribute('pointer-events','none');
+    lb.textContent = label.toUpperCase();
+    cg.appendChild(lb);
+  });
+
+  // ── Curves ──────────────────────────────────────────────────
+  const glowG  = document.createElementNS(NS, 'g'); glowG.setAttribute('filter','url(#pc-glow)'); cg.appendChild(glowG);
+  const sharpG = document.createElementNS(NS, 'g'); cg.appendChild(sharpG);
+
+  _rmPathLinks = [];
+  rmLinks.filter(l => nodePos[l.source] && nodePos[l.target]).forEach(l => {
+    const s = nodePos[l.source], t = nodePos[l.target];
+    const col = _PC_COLORS[s.ci % _PC_COLORS.length];
+    const cx = (s.x + t.x) / 2;
+    const d  = `M${s.x},${s.y} C${cx},${s.y} ${cx},${t.y} ${t.x},${t.y}`;
+    const pg = document.createElementNS(NS,'path');
+    pg.setAttribute('d',d); pg.setAttribute('stroke',col); pg.setAttribute('stroke-width','2.5');
+    pg.setAttribute('stroke-opacity','0.16'); pg.setAttribute('fill','none');
+    glowG.appendChild(pg);
+    const ps = document.createElementNS(NS,'path');
+    ps.setAttribute('d',d); ps.setAttribute('stroke',col); ps.setAttribute('stroke-width','1.2');
+    ps.setAttribute('stroke-opacity','0.26'); ps.setAttribute('fill','none');
+    sharpG.appendChild(ps);
+    _rmPathLinks.push({ glow:pg, sharp:ps, srcId:l.source, tgtId:l.target, col });
+  });
+
+  // ── Nodes ───────────────────────────────────────────────────
+  const nodesG = document.createElementNS(NS, 'g'); cg.appendChild(nodesG);
+  _rmPathNodes = new Map();
+
+  rmNodes.forEach(n => {
+    const pos = nodePos[n.id]; if(!pos) return;
+    const col   = _PC_COLORS[pos.ci % _PC_COLORS.length];
+    const stCol = RM_STATUS_STROKE[n.status || 'not_started'];
+    const isSel = !!(rmSel && rmSel.id === n.id);
+
+    const g = document.createElementNS(NS,'g');
+    g.style.cursor = 'pointer'; g.dataset.id = n.id;
+
+    const ring = document.createElementNS(NS,'circle');
+    ring.setAttribute('cx',pos.x); ring.setAttribute('cy',pos.y); ring.setAttribute('r', NR+4);
+    ring.setAttribute('fill',col); ring.setAttribute('fill-opacity', isSel?'0.35':'0.07');
+    g.appendChild(ring);
+
+    const circle = document.createElementNS(NS,'circle');
+    circle.setAttribute('cx',pos.x); circle.setAttribute('cy',pos.y); circle.setAttribute('r', isSel?NR+2:NR);
+    circle.setAttribute('fill','#0d1117'); circle.setAttribute('stroke',col);
+    circle.setAttribute('stroke-width', isSel?'2.5':'1.5');
+    g.appendChild(circle);
+
+    const dot = document.createElementNS(NS,'circle');
+    dot.setAttribute('cx',pos.x); dot.setAttribute('cy',pos.y); dot.setAttribute('r','2.2');
+    dot.setAttribute('fill',stCol); g.appendChild(dot);
+
+    const isRight = pos.ci <= (N-1)/2;
+    const txt = document.createElementNS(NS,'text');
+    txt.setAttribute('x', isRight ? pos.x+NR+6 : pos.x-NR-6);
+    txt.setAttribute('y', pos.y+3.5);
+    txt.setAttribute('text-anchor', isRight?'start':'end');
+    txt.setAttribute('fill', isSel ? col : 'rgba(139,148,158,0.7)');
+    txt.setAttribute('font-size', isSel?'10.5':'9.5');
+    txt.setAttribute('font-weight', isSel?'600':'400');
+    txt.setAttribute('font-family','Inter,sans-serif');
+    txt.setAttribute('pointer-events','none');
+    txt.setAttribute('paint-order','stroke');
+    txt.setAttribute('stroke','#080d13');
+    txt.setAttribute('stroke-width','4');
+    txt.setAttribute('stroke-linejoin','round');
+    txt.textContent = n.name.length>24 ? n.name.slice(0,23)+'…' : n.name;
+    g.appendChild(txt);
+
+    _rmPathNodes.set(n.id, {g, ring, circle, txt, col, stCol, isSel, pos, isRight, NR});
+
+    // Hover (direct connections only)
+    g.addEventListener('mouseenter', e => {
+      const diff = '●'.repeat(n.difficulty||1)+'○'.repeat(5-(n.difficulty||1));
+      tip.innerHTML = `<b>${_escHtml(n.name)}</b><span>${diff} · ⏱ ${n.estimated_minutes||30}m</span>`;
+      tip.style.display='block'; _rmMoveTip(e);
+      if(rmSel) return; // tooltip updates but highlight stays for selected path
+      ring.setAttribute('fill-opacity','0.28'); circle.setAttribute('r', NR+2);
+      const conn = new Set([n.id]);
+      _rmPathLinks.forEach(le => {
+        const hit = le.srcId===n.id || le.tgtId===n.id;
+        if(hit){ conn.add(le.srcId); conn.add(le.tgtId); }
+        le.glow.setAttribute('stroke-opacity', hit?'0.55':'0.04');
+        le.sharp.setAttribute('stroke-opacity', hit?'0.9':'0.04');
+        le.sharp.setAttribute('stroke-width', hit?'2':'1.2');
+      });
+      _rmPathNodes.forEach((refs, id) => { if(!conn.has(id)) refs.g.setAttribute('opacity','0.18'); });
+    });
+    g.addEventListener('mousemove', e => _rmMoveTip(e));
+    g.addEventListener('mouseleave', () => {
+      tip.style.display='none';
+      if(rmSel) return; // keep path highlight active
+      ring.setAttribute('fill-opacity','0.07'); circle.setAttribute('r', NR);
+      _rmPathLinks.forEach(le => { le.glow.setAttribute('stroke-opacity','0.16'); le.sharp.setAttribute('stroke-opacity','0.26'); le.sharp.setAttribute('stroke-width','1.2'); });
+      _rmPathNodes.forEach(refs => refs.g.removeAttribute('opacity'));
+    });
+    g.addEventListener('click', () => rmSelectNode(n));
+    nodesG.appendChild(g);
+  });
+
+  area.insertBefore(svg, area.firstChild);
+
+  // ── D3 zoom (pan + scroll zoom) ─────────────────────────────
+  const initScale = Math.min(1, (VW - 80) / svgW);
+  const initTx    = (VW - svgW * initScale) / 2;
+  const initT     = d3.zoomIdentity.translate(initTx, 0).scale(initScale);
+
+  _rmPcZoomInst = d3.zoom()
+    .scaleExtent([0.15, 4])
+    .on('zoom', e => d3.select('#pcContent').attr('transform', e.transform));
+
+  d3.select(svg).call(_rmPcZoomInst).call(_rmPcZoomInst.transform, initT);
+  d3.select(svg).on('dblclick.zoom', null); // disable dblclick zoom
+
+  // If a node was already selected, apply path highlight immediately
+  if(rmSel) _rmHighlightPath(rmSel.id);
+}
+
+// BFS backwards: collect only ancestors (prerequisite chain) leading to startId
+function _rmGetFullPath(startId){
+  const bwd = {};
+  rmLinks.forEach(l => {
+    (bwd[l.target] = bwd[l.target]||[]).push(l.source);
+  });
+  const visited = new Set([startId]);
+  const queue   = [startId];
+  while(queue.length){
+    const cur = queue.shift();
+    (bwd[cur]||[]).forEach(id => {
+      if(!visited.has(id)){ visited.add(id); queue.push(id); }
+    });
+  }
+  return visited;
+}
+
+function _rmHighlightPath(nodeId){
+  if(!_rmPathNodes.size) return;
+  const path = _rmGetFullPath(nodeId);
+
+  // Links: in-path = bright glow, out-of-path = nearly invisible
+  _rmPathLinks.forEach(le => {
+    const inPath = path.has(le.srcId) && path.has(le.tgtId);
+    le.glow.setAttribute('stroke-opacity',  inPath ? '0.7'  : '0.03');
+    le.glow.setAttribute('stroke-width',    inPath ? '4'    : '2.5');
+    le.sharp.setAttribute('stroke-opacity', inPath ? '0.95' : '0.03');
+    le.sharp.setAttribute('stroke-width',   inPath ? '2.5'  : '1.2');
+  });
+
+  // Nodes
+  _rmPathNodes.forEach((refs, id) => {
+    const inPath = path.has(id);
+    const isSel  = id === nodeId;
+    refs.g.removeAttribute('opacity');
+    if(!inPath){ refs.g.setAttribute('opacity','0.1'); return; }
+    refs.ring.setAttribute('fill-opacity',  isSel ? '0.45' : '0.18');
+    refs.circle.setAttribute('r',           isSel ? refs.NR+3 : refs.NR+1);
+    refs.circle.setAttribute('stroke-width',isSel ? '3' : '2');
+    refs.txt.setAttribute('fill',           refs.col);
+    refs.txt.setAttribute('font-size',      isSel ? '11' : '10');
+    refs.txt.setAttribute('font-weight',    isSel ? '700' : '500');
+  });
+}
+
+function _rmClearPathHighlight(){
+  _rmPathLinks.forEach(le => {
+    le.glow.setAttribute('stroke-opacity','0.16'); le.glow.setAttribute('stroke-width','2.5');
+    le.sharp.setAttribute('stroke-opacity','0.26'); le.sharp.setAttribute('stroke-width','1.2');
+  });
+  _rmPathNodes.forEach((refs, id) => {
+    refs.g.removeAttribute('opacity');
+    refs.ring.setAttribute('fill-opacity','0.07');
+    refs.circle.setAttribute('r', refs.NR);
+    refs.circle.setAttribute('stroke-width','1.5');
+    refs.txt.setAttribute('fill','rgba(139,148,158,0.7)');
+    refs.txt.setAttribute('font-size','9.5');
+    refs.txt.setAttribute('font-weight','400');
+  });
+}
+
+function rmPcZoom(factor){
+  if(!_rmPcZoomInst) return;
+  const svg = document.querySelector('#rmPathArea svg');
+  if(svg) d3.select(svg).transition().duration(200).call(_rmPcZoomInst.scaleBy, factor);
+}
+function rmPcZoomFit(){
+  if(!_rmPcZoomInst) return;
+  const svg = document.querySelector('#rmPathArea svg');
+  if(!svg) return;
+  const area = document.getElementById('rmPathArea');
+  const VW = area.clientWidth;
+  const n  = (_rmPathNodes?.size || 1);
+  const MIN_GAP = 200, ML = 60, MR = 60;
+  const contentW = ML + MR + (n - 1) * MIN_GAP;
+  const scale = Math.min(1, (VW - 80) / Math.max(contentW, VW));
+  const tx    = (VW - contentW * scale) / 2;
+  d3.select(svg).transition().duration(300)
+    .call(_rmPcZoomInst.transform, d3.zoomIdentity.translate(tx,0).scale(scale));
+}
+
+// ── Detail panel drag-resize ────────────────────────────────────
+(function(){
+  let dragging = false, startX = 0, startW = 0;
+  document.addEventListener('mousedown', e => {
+    if(!e.target.closest('#rmDetResize')) return;
+    dragging = true; startX = e.clientX;
+    startW = document.getElementById('rmDetail').offsetWidth;
+    e.target.classList.add('dragging');
+    document.body.style.cssText += ';cursor:col-resize!important;user-select:none;';
+  });
+  document.addEventListener('mousemove', e => {
+    if(!dragging) return;
+    const newW = Math.max(260, Math.min(640, startW + (startX - e.clientX)));
+    document.getElementById('rmDetail').style.width = newW + 'px';
+  });
+  document.addEventListener('mouseup', () => {
+    if(!dragging) return;
+    dragging = false;
+    document.getElementById('rmDetResize')?.classList.remove('dragging');
+    document.body.style.cursor = ''; document.body.style.userSelect = '';
+  });
+})();
+
+function _rmMoveTip(e){
+  const tip = document.getElementById('rmPcTip');
+  const x = e.clientX + 14, y = e.clientY - 10;
+  tip.style.left = Math.min(x, window.innerWidth  - 240) + 'px';
+  tip.style.top  = Math.min(y, window.innerHeight - 80)  + 'px';
+}
+
+function rmSelectNode(datum){
+  rmSel = datum;
+  if(rmViewMode === 'path') _rmHighlightPath(datum.id);
+  document.getElementById('rmDetail').classList.remove('hidden');
+  document.getElementById('rmConceptName').textContent = datum.name;
+
+  const col   = RM_CAT_COLOR[datum.category]||'#58a6ff';
+  const stars = '★'.repeat(datum.difficulty||1)+'☆'.repeat(5-(datum.difficulty||1));
+  document.getElementById('rmMeta').innerHTML =
+    `<span class="rm-cat-badge" style="color:${col};border-color:${col}">${datum.category||'fundamentals'}</span>
+     <span class="rm-diff">${stars}</span>
+     <span class="rm-time">~${datum.estimated_minutes||30} min</span>`;
+
+  _rmRenderStatusBar(datum.id, datum.status||'not_started');
+
+  const placeholder = document.getElementById('rmCardPlaceholder');
+  const stream      = document.getElementById('rmCardStream');
+  const btn         = document.getElementById('rmLoadCardBtn');
+
+  if(datum.ai_cache){
+    placeholder.style.display = 'none';
+    stream.style.display      = '';
+    _rmRenderCard(datum.ai_cache, stream);
+    btn.textContent = '↺ Regenerate';
+  }else{
+    placeholder.style.display = '';
+    stream.style.display      = 'none';
+    stream.innerHTML          = '';
+    btn.textContent           = '✦ AI Card';
+  }
+  btn.disabled = false;
+
+  document.getElementById('rmNotesTA').value = datum.personal_notes||'';
+}
+
+const RM_STAT_SHORT = {
+  not_started:'New', studying:'Study', understood:'Got it',
+  practiced:'Practice', mastered:'Mastered',
+};
+
+function _rmRenderStatusBar(nodeId, currentStatus){
+  document.getElementById('rmStatusBar').innerHTML =
+    Object.entries(RM_STATUS).map(([s,m])=>{
+      const on = s===currentStatus ? ' on' : '';
+      return `<button class="rm-stat-btn${on}" onclick="rmSetStatus('${nodeId}','${s}')"><span class="se">${m.emoji}</span>${RM_STAT_SHORT[s]}</button>`;
+    }).join('');
+}
+
+async function rmExpandNode(){
+  if(!rmSel) return;
+  const btn = document.getElementById('rmExpandBtn');
+  btn.disabled = true;
+  btn.textContent = '⟳ Expanding…';
+  try{
+    const r = await fetch(`${API}/api/roadmap/nodes/${rmSel.id}/expand`, {method:'POST'});
+    if(!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    await rmLoadGraph();
+    btn.textContent = `✓ +${d.new_nodes} nodes`;
+    setTimeout(()=>{ btn.textContent='⊕ Expand'; btn.disabled=false; }, 2500);
+  }catch(e){
+    btn.textContent = '⚠ Failed';
+    setTimeout(()=>{ btn.textContent='⊕ Expand'; btn.disabled=false; }, 2000);
+  }
+}
+
+async function rmLoadCard(){
+  if(!rmSel) return;
+  const btn         = document.getElementById('rmLoadCardBtn');
+  const placeholder = document.getElementById('rmCardPlaceholder');
+  const stream      = document.getElementById('rmCardStream');
+
+  btn.disabled    = true;
+  btn.textContent = '…';
+  placeholder.style.display = 'none';
+  stream.style.display      = '';
+  stream.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">Generating…</div>';
+  rmSel.ai_cache = '';
+
+  try{
+    // always force=true — this function is only called on explicit button clicks
+    const r = await fetch(`${API}/api/roadmap/nodes/${rmSel.id}/card?force=true`);
+    if(!r.ok) throw new Error('Request failed');
+    const reader = r.body.getReader();
+    const dec    = new TextDecoder();
+    let full = '';
+    while(true){
+      const {done, value} = await reader.read();
+      if(done) break;
+      full += dec.decode(value, {stream:true});
+      stream.textContent = full; // plain text while streaming
+    }
+    rmSel.ai_cache = full;
+    const node = rmNodes.find(n=>n.id===rmSel.id);
+    if(node) node.ai_cache = full;
+    _rmRenderCard(full, stream); // switch to formatted view
+    btn.textContent = '↺ Regenerate';
+    btn.disabled    = false;
+  }catch(e){
+    stream.innerHTML = `<div style="color:#f78166;font-size:12px;padding:8px 0">Error: ${_escHtml(String(e.message))}</div>`;
+    btn.textContent = '↺ Retry';
+    btn.disabled    = false;
+  }
+}
+
+const _RM_SEC = {
+  'WHAT IT IS':      {icon:'📖', color:'#58a6ff', bg:'rgba(88,166,255,.08)'},
+  'WHEN TO USE IT':  {icon:'🎯', color:'#3fb950', bg:'rgba(63,185,80,.08)'},
+  'CODE EXAMPLE':    {icon:'💻', color:'#d2a8ff', bg:'rgba(210,168,255,.09)'},
+  'COMMON MISTAKES': {icon:'⚠️', color:'#f78166', bg:'rgba(247,129,102,.09)'},
+  'ANALOGY':         {icon:'💡', color:'#e3b341', bg:'rgba(227,179,65,.09)'},
+};
+
+function _rmRenderCard(text, el){
+  // Match ## or ### or #### headers (LLMs vary)
+  const sections = [];
+  let cur = null;
+  for(const line of text.split('\n')){
+    const m = line.match(/^#{2,4}\s+(.+)/);
+    if(m){ if(cur) sections.push(cur); cur = {title:m[1].trim().toUpperCase(), lines:[]}; }
+    else if(cur) cur.lines.push(line);
+  }
+  if(cur) sections.push(cur);
+
+  if(!sections.length){
+    // no headers found — show as plain card
+    el.innerHTML = `<div class="rm-sec-card">
+      <div class="rm-sec-card-body"><p>${_rmMd(text)}</p></div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = sections.map(s=>{
+    const cfg     = _RM_SEC[s.title] || {icon:'•', color:'var(--muted)', bg:'rgba(255,255,255,.04)'};
+    const content = s.lines.join('\n').trim();
+    const isCode  = /CODE/i.test(s.title);
+    const hdrStyle= `background:${cfg.bg};color:${cfg.color};`;
+
+    let body = '';
+    if(isCode){
+      const cm   = content.match(/```(\w*)\n?([\s\S]*?)```/);
+      const lang = cm ? (cm[1]||'') : '';
+      const code = cm ? cm[2].trim()
+                      : content.replace(/^```\w*\n?|```$/gm,'').trim();
+      const pre  = cm ? content.slice(0, content.indexOf('```')).trim() : '';
+      body = `${pre ? `<p>${_rmMd(pre)}</p>` : ''}
+        <div class="rm-code-block">
+          ${lang ? `<div class="rm-code-lang">${_escHtml(lang)}</div>` : ''}
+          <pre class="rm-code">${_escHtml(code)}</pre>
+        </div>`;
+    } else {
+      let html = '', inList = false;
+      for(const line of content.split('\n')){
+        const t = line.trim();
+        if(/^[-•*]\s/.test(t) || /^\d+\.\s/.test(t)){
+          if(!inList){ html += '<ul>'; inList = true; }
+          html += `<li>${_rmMd(t.replace(/^[-•*]\s|^\d+\.\s/,''))}</li>`;
+        } else {
+          if(inList){ html += '</ul>'; inList = false; }
+          if(t) html += `<p>${_rmMd(t)}</p>`;
+        }
+      }
+      if(inList) html += '</ul>';
+      body = html;
+    }
+
+    return `<div class="rm-sec-card">
+      <div class="rm-sec-card-hdr" style="${hdrStyle}"><span class="si">${cfg.icon}</span>${s.title}</div>
+      <div class="rm-sec-card-body">${body}</div>
+    </div>`;
+  }).join('');
+}
+
+// inline markdown: **bold**, `code`, *italic*
+function _rmMd(raw){
+  return _escHtml(raw)
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g,       '<code class="rm-inline-code">$1</code>')
+    .replace(/\*([^*]+)\*/g,     '<em>$1</em>');
+}
+
+function _escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function rmSetStatus(nodeId, status){
+  try{
+    await fetch(`${API}/api/roadmap/nodes/${nodeId}/status`,{
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({status}),
+    });
+    const node = rmNodes.find(n=>n.id===nodeId);
+    if(node) node.status = status;
+    if(rmSel && rmSel.id===nodeId){ rmSel.status = status; }
+    _rmRenderStatusBar(nodeId, status);
+    _rmRefreshNodeColors();
+    _rmUpdateProgress();
+  }catch(e){ console.error('Status update failed',e); }
+}
+
+async function rmSaveNotes(){
+  if(!rmSel) return;
+  const notes = document.getElementById('rmNotesTA').value;
+  rmSel.personal_notes = notes;
+  const node = rmNodes.find(n=>n.id===rmSel.id);
+  if(node) node.personal_notes = notes;
+  try{
+    await fetch(`${API}/api/roadmap/nodes/${rmSel.id}/notes`,{
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({notes}),
+    });
+  }catch(e){ console.error('Notes save failed',e); }
+}
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape' && document.getElementById('rmOverlay').classList.contains('open'))
+    closeRoadmap();
+});
+
+// ══════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════
 loadGraph();
 window.addEventListener('resize',()=>{ initGraph(); if(selectedId)hlNode(selectedId); });
+
+/* ── RIGHT-CLICK VOCABULARY ───────────────────────────────── */
+(function(){
+  let _ctxWord = '';
+
+  document.addEventListener('contextmenu', e => {
+    const ctxMenu = document.getElementById('ctxMenu');
+    const ctxLbl  = document.getElementById('ctxWordLabel');
+    const ctxItem = document.getElementById('ctxAddItem');
+    if(!ctxMenu) return;
+
+    const raw = (window.getSelection()?.toString() ?? '').trim();
+    if(!raw){ ctxMenu.style.display='none'; return; }
+
+    e.preventDefault();
+    _ctxWord = raw;
+
+    const valid = /^[a-zA-Z][a-zA-Z-]{3,}$/.test(raw) && !raw.includes(' ');
+    ctxLbl.textContent = valid
+      ? `"${raw}"`
+      : raw.length < 4    ? `"${raw}" — min 4 letters`
+      : raw.includes(' ') ? `"${raw}" — single word only`
+      : `"${raw}" — letters only`;
+
+    ctxItem.classList.toggle('disabled', !valid);
+
+    ctxMenu.style.display = 'block';
+    ctxMenu.style.left = Math.min(e.clientX + 4, window.innerWidth  - 200) + 'px';
+    ctxMenu.style.top  = Math.min(e.clientY + 4, window.innerHeight -  80) + 'px';
+  });
+
+  document.addEventListener('click',  () => { const m = document.getElementById('ctxMenu'); if(m) m.style.display='none'; });
+  document.addEventListener('scroll', () => { const m = document.getElementById('ctxMenu'); if(m) m.style.display='none'; }, true);
+  document.addEventListener('keydown', e => {
+    if(e.key==='Escape'){
+      const m = document.getElementById('ctxMenu');
+      if(m) m.style.display='none';
+      closeWordPopup();
+    }
+  });
+
+  window._getCtxWord = () => _ctxWord;
+})();
+
+async function ctxAddWord(){
+  document.getElementById('ctxMenu').style.display = 'none';
+  const word = window._getCtxWord().toLowerCase();
+  if(!word) return;
+
+  const bodyEl = document.getElementById('wpBody');
+  const badge  = document.getElementById('wpBadge');
+  document.getElementById('wpWord').textContent = word;
+  badge.style.display = 'none';
+  bodyEl.innerHTML = '<div class="wp-loading"><span class="spin"></span>Checking…</div>';
+  document.getElementById('wordPopup').style.display = 'flex';
+  document.getElementById('wpBackdrop').style.display = 'block';
+
+  try{
+    // Spellcheck
+    const sc = await apiPost('/api/ai/spellcheck', {word});
+    const finalWord = (sc.correction && sc.correction !== word) ? sc.correction : word;
+    document.getElementById('wpWord').textContent = finalWord;
+
+    // Try to create node; 409 = already exists (that's fine)
+    const r = await fetch(`${API}/api/nodes`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({id: finalWord, cat:'concept', notes:''}),
+    });
+    const isNew = r.ok;
+    if(!isNew && r.status !== 409) throw new Error(`Server error ${r.status}`);
+
+    badge.textContent   = isNew ? 'NEW' : 'Already in vocab';
+    badge.className     = `wp-badge ${isNew ? 'isnew' : 'exists'}`;
+    badge.style.display = '';
+
+    // Stream AI card
+    bodyEl.innerHTML = '<div class="wp-loading"><span class="spin"></span>Generating card…</div>';
+    const cardR = await fetch(`${API}/api/ai/stream/${encodeURIComponent(finalWord)}`);
+    if(!cardR.ok) throw new Error('Card stream failed');
+
+    const reader = cardR.body.getReader();
+    const dec    = new TextDecoder();
+    let full = '';
+    let gotFirstChunk = false;
+
+    // If LLM takes >3 s to send the first byte, show a queue message
+    const busyTimer = setTimeout(() => {
+      if(!gotFirstChunk)
+        bodyEl.innerHTML = '<div class="wp-loading"><span class="spin"></span>The AI is working on another request — this one is next…</div>';
+    }, 3000);
+
+    while(true){
+      const {done, value} = await reader.read();
+      if(done) break;
+      if(!gotFirstChunk){
+        gotFirstChunk = true;
+        clearTimeout(busyTimer);
+        bodyEl.innerHTML = '';
+      }
+      full += dec.decode(value, {stream:true});
+      bodyEl.textContent = full;
+    }
+    clearTimeout(busyTimer);
+
+    _wpRenderCard(full, bodyEl);
+    if(isNew) await loadGraph();
+
+  }catch(e){
+    bodyEl.innerHTML = `<div class="wp-msg" style="color:#f78166">⚠ ${_escHtml(String(e.message))}</div>`;
+  }
+}
+
+function closeWordPopup(){
+  document.getElementById('wordPopup').style.display = 'none';
+  document.getElementById('wpBackdrop').style.display = 'none';
+}
+
+function _wpRenderCard(text, el){
+  const ICONS = {'DEFINITION':'📖','EXAMPLES':'💡','HOW TO SPEAK':'🗣','IDEAS TO REMEMBER':'🧠','RELATED WORDS':'🔗'};
+  const sections = [];
+  let cur = null;
+  for(const line of text.split('\n')){
+    const m = line.match(/^#{1,4}\s+(.+)/);
+    if(m){ if(cur) sections.push(cur); cur={title:m[1].trim().toUpperCase(), lines:[]}; }
+    else if(cur) cur.lines.push(line);
+  }
+  if(cur) sections.push(cur);
+  if(!sections.length){ el.textContent = text; return; }
+
+  el.innerHTML = sections.map(s=>{
+    const icon = ICONS[s.title] || '•';
+    const content = s.lines.join('\n').trim();
+    let html = '', inList = false;
+    for(const line of content.split('\n')){
+      const t = line.trim();
+      if(/^[-•*]\s/.test(t)){
+        if(!inList){ html += '<ul class="rm-sec-list">'; inList = true; }
+        html += `<li>${_rmMd(t.replace(/^[-•*]\s/,''))}</li>`;
+      } else {
+        if(inList){ html += '</ul>'; inList = false; }
+        if(t) html += `<p class="rm-sec-txt">${_rmMd(t)}</p>`;
+      }
+    }
+    if(inList) html += '</ul>';
+    return `<div class="rm-sec-card">
+      <div class="rm-sec-card-hdr" style="background:rgba(88,166,255,.06);color:var(--muted)">${icon} ${s.title}</div>
+      <div class="rm-sec-card-body">${html}</div>
+    </div>`;
+  }).join('');
+}
 </script>
+
+<!-- PATH VIEW TOOLTIP -->
+<div class="rm-pc-tip" id="rmPcTip"></div>
+
+<!-- RIGHT-CLICK CONTEXT MENU -->
+<div class="ctx-menu" id="ctxMenu">
+  <div class="ctx-word" id="ctxWordLabel"></div>
+  <div class="ctx-item" id="ctxAddItem" onclick="ctxAddWord()">
+    <span>📚</span><span>Add to Vocabulary</span>
+  </div>
+</div>
+
+<!-- WORD POPUP -->
+<div class="wp-backdrop" id="wpBackdrop" onclick="closeWordPopup()"></div>
+<div class="word-popup" id="wordPopup">
+  <div class="wp-hdr">
+    <span class="wp-word" id="wpWord"></span>
+    <span class="wp-badge" id="wpBadge" style="display:none"></span>
+    <button class="wp-close" onclick="closeWordPopup()">×</button>
+  </div>
+  <div class="wp-body" id="wpBody"></div>
+</div>
+
 </body>
 </html>

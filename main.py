@@ -123,6 +123,35 @@ def init_db():
                 model       TEXT NOT NULL,
                 created_at  TEXT DEFAULT (datetime('now'))
             );
+
+            CREATE TABLE IF NOT EXISTS rm_technologies (
+                id          TEXT PRIMARY KEY,
+                name        TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                focus       TEXT DEFAULT '',
+                created_at  TEXT DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE IF NOT EXISTS rm_nodes (
+                id                  TEXT PRIMARY KEY,
+                tech_id             TEXT NOT NULL,
+                name                TEXT NOT NULL,
+                category            TEXT DEFAULT 'fundamentals',
+                difficulty          INTEGER DEFAULT 1,
+                estimated_minutes   INTEGER DEFAULT 30,
+                status              TEXT DEFAULT 'not_started',
+                ai_cache            TEXT DEFAULT '',
+                personal_notes      TEXT DEFAULT '',
+                priority            INTEGER DEFAULT 0,
+                created_at          TEXT DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE IF NOT EXISTS rm_links (
+                source  TEXT NOT NULL,
+                target  TEXT NOT NULL,
+                type    TEXT DEFAULT 'prerequisite',
+                PRIMARY KEY (source, target)
+            );
         """)
         # migrate: add columns added after initial release
         cols = [r[1] for r in db.execute("PRAGMA table_info(nodes)").fetchall()]
@@ -142,6 +171,25 @@ def init_db():
         # migrate: jargon → concept, temporal → phrase (both categories removed)
         db.execute("UPDATE nodes SET cat='concept' WHERE cat='jargon'")
         db.execute("UPDATE nodes SET cat='phrase'  WHERE cat='temporal'")
+
+        # migrate: add columns to rm_technologies and rm_nodes
+        rm_tech_cols = [r[1] for r in db.execute("PRAGMA table_info(rm_technologies)").fetchall()]
+        if "focus" not in rm_tech_cols:
+            db.execute("ALTER TABLE rm_technologies ADD COLUMN focus TEXT DEFAULT ''")
+        if "sections" not in rm_tech_cols:
+            db.execute("ALTER TABLE rm_technologies ADD COLUMN sections TEXT DEFAULT '[]'")
+        rm_node_cols = [r[1] for r in db.execute("PRAGMA table_info(rm_nodes)").fetchall()]
+        if "section" not in rm_node_cols:
+            db.execute("ALTER TABLE rm_nodes ADD COLUMN section TEXT DEFAULT ''")
+
+        # seed roadmap technologies
+        db.executemany(
+            "INSERT OR IGNORE INTO rm_technologies (id, name, description) VALUES (?,?,?)",
+            [
+                ("rubyonrails", "Ruby on Rails", "Full-stack MVC web framework for Ruby"),
+                ("csharp",      "C#",            "Object-oriented language by Microsoft for .NET"),
+            ]
+        )
 
         # seed data if empty
         count = db.execute("SELECT COUNT(*) FROM nodes").fetchone()[0]
@@ -1121,6 +1169,396 @@ def stats_trust():
         "total_reviewed": len(reviewed),
         "total_words":    len(rows),
     }
+
+
+# ── KNOWLEDGE ROADMAP ─────────────────────────────────────────
+
+@app.get("/api/roadmap/technologies")
+def roadmap_technologies():
+    with get_db() as db:
+        rows = db.execute("SELECT * FROM rm_technologies ORDER BY name").fetchall()
+    return {"technologies": [dict(r) for r in rows]}
+
+
+@app.patch("/api/roadmap/technologies/{tech_id}/focus")
+def roadmap_set_focus(tech_id: str, body: dict):
+    focus = body.get("focus", "").strip()
+    with get_db() as db:
+        updated = db.execute(
+            "UPDATE rm_technologies SET focus=? WHERE id=?", (focus, tech_id)
+        ).rowcount
+    if not updated:
+        raise HTTPException(404, f"Technology '{tech_id}' not found")
+    return {"ok": True, "focus": focus}
+
+
+async def _stream_collect(prompt: str) -> str:
+    """Collect all chunks from _llm_stream into a single string (avoids read-timeout)."""
+    parts: list[str] = []
+    async for chunk in _llm_stream(prompt):
+        parts.append(chunk)
+    return "".join(parts)
+
+
+def _parse_roadmap_json(raw: str) -> tuple[list, list, list]:
+    """Extract nodes, links, and sections from a raw LLM response that contains JSON."""
+    start = raw.find("{")
+    end   = raw.rfind("}") + 1
+    if start == -1 or end == 0:
+        return [], [], []
+    try:
+        data = json.loads(raw[start:end])
+        return data.get("nodes", []), data.get("links", []), data.get("sections", [])
+    except json.JSONDecodeError:
+        return [], [], []
+
+
+def _save_roadmap_batch(db, tech_id: str, nodes: list, links: list,
+                        all_valid_ids: set, offset: int = 0,
+                        sections: list = None, default_section: str = ''):
+    """Insert nodes and links for one batch, skipping duplicates."""
+    if sections is not None:
+        db.execute("UPDATE rm_technologies SET sections=? WHERE id=?",
+                   (json.dumps(sections), tech_id))
+    for i, n in enumerate(nodes):
+        nid = f"{tech_id}_{n['id']}"
+        db.execute("""
+            INSERT OR IGNORE INTO rm_nodes
+                (id, tech_id, name, category, section, difficulty, estimated_minutes, priority)
+            VALUES (?,?,?,?,?,?,?,?)
+        """, (nid, tech_id, n.get("name", ""), n.get("category", "fundamentals"),
+              n.get("section", default_section),
+              max(1, min(5, int(n.get("difficulty", 1)))),
+              int(n.get("estimated_minutes", 30)), offset + i))
+    for l in links:
+        rs, rt = l.get("source", ""), l.get("target", "")
+        if rs in all_valid_ids and rt in all_valid_ids and rs != rt:
+            src = f"{tech_id}_{rs}"
+            tgt = f"{tech_id}_{rt}"
+            db.execute(
+                "INSERT OR IGNORE INTO rm_links (source, target, type) VALUES (?,?,?)",
+                (src, tgt, l.get("type", "prerequisite"))
+            )
+
+
+_ROADMAP_JSON_SCHEMA = """{
+  "sections": ["Section Name 1", "Section Name 2", "…"],
+  "nodes": [
+    {{"id": "snake_case_id", "name": "Human Readable Name",
+      "section": "Section Name 1", "category": "fundamentals",
+      "difficulty": 1, "estimated_minutes": 20}}
+  ],
+  "links": [
+    {{"source": "node_id", "target": "node_id", "type": "prerequisite"}}
+  ]
+}}"""
+
+
+@app.post("/api/roadmap/generate/{tech_id}")
+async def roadmap_generate(tech_id: str, expand: bool = False):
+    """
+    Two-phase progressive roadmap generation.
+    expand=false (default): clear existing nodes and generate the first 15-20 core concepts.
+    expand=true            : keep existing nodes and add 10-15 more advanced concepts.
+    """
+    with get_db() as db:
+        tech = db.execute("SELECT * FROM rm_technologies WHERE id=?", (tech_id,)).fetchone()
+        existing_rows = db.execute(
+            "SELECT id, name FROM rm_nodes WHERE tech_id=? ORDER BY priority", (tech_id,)
+        ).fetchall()
+    if not tech:
+        raise HTTPException(404, f"Technology '{tech_id}' not found")
+
+    tech_name     = tech["name"]
+    tech_focus    = (tech["focus"] or "").strip()
+    existing_list = [r["name"] for r in existing_rows]
+    existing_ids  = {r["id"].replace(f"{tech_id}_", "") for r in existing_rows}
+
+    focus_clause = (
+        f"\nFOCUS AREA: {tech_focus}\n"
+        "Generate concepts that are ONLY relevant to this focus area. "
+        "Skip any concept that does not directly apply to it.\n"
+    ) if tech_focus else ""
+
+    if not expand:
+        # ── PHASE 1: core concepts ──────────────────────────────
+        prompt = f"""Generate a knowledge roadmap for learning {tech_name}.
+{focus_clause}
+Return ONLY a valid JSON object. No markdown. No code blocks. Just raw JSON.
+
+{_ROADMAP_JSON_SCHEMA}
+
+Rules:
+- Include exactly 15-20 of the MOST FUNDAMENTAL concepts (beginner to intermediate)
+- Define 4-7 sections ordered earliest-to-learn first (e.g. ["Ruby Basics", "OOP", "Web Framework", "Data"])
+- section: assign every node to exactly one of your defined section names
+- id: unique snake_case
+- name: human-readable (1-4 words)
+- category: one of: fundamentals, oop, web, data, testing, tooling, advanced
+- difficulty: 1 (beginner) to 5 (expert)
+- estimated_minutes: 15-90
+- links: prerequisite relationships only (direct dependencies)
+- All source/target IDs must match node IDs in this same response
+- No duplicate IDs"""
+
+        try:
+            raw   = await _stream_collect(prompt)
+            nodes, links, sections = _parse_roadmap_json(raw)
+            if not nodes:
+                raise HTTPException(500, "AI returned no usable nodes")
+
+            all_ids = {n["id"] for n in nodes if "id" in n}
+            with get_db() as db:
+                db.execute("""
+                    DELETE FROM rm_links WHERE source IN (
+                        SELECT id FROM rm_nodes WHERE tech_id=?
+                    ) OR target IN (SELECT id FROM rm_nodes WHERE tech_id=?)
+                """, (tech_id, tech_id))
+                db.execute("DELETE FROM rm_nodes WHERE tech_id=?", (tech_id,))
+                _save_roadmap_batch(db, tech_id, nodes, links, all_ids, offset=0, sections=sections)
+
+            return {"ok": True, "phase": 1, "nodes": len(nodes), "links": len(links)}
+        except json.JSONDecodeError as e:
+            raise HTTPException(500, f"JSON parse error: {e}")
+
+    else:
+        # ── PHASE 2: advanced / complementary concepts ──────────
+        if not existing_list:
+            raise HTTPException(400, "Run phase 1 first (expand=false)")
+
+        existing_sections = json.loads(tech.get("sections") or "[]") if tech else []
+        sections_hint = (
+            f"Use these existing sections (assign each new node to one): {existing_sections}"
+            if existing_sections else
+            "Define the same sections as before and assign each new node to one."
+        )
+        existing_block = "\n".join(f"- {name}" for name in existing_list)
+        prompt = f"""I am learning {tech_name}. I already have these concepts in my roadmap:
+
+{existing_block}
+
+Generate 10-15 MORE concepts that complement and extend the above list.
+Do NOT repeat or rephrase any concept already in the list.
+Focus on intermediate and advanced topics not yet covered.
+{focus_clause}
+{sections_hint}
+Return ONLY a valid JSON object. No markdown. No code blocks. Just raw JSON.
+
+{_ROADMAP_JSON_SCHEMA}
+
+Rules:
+- 10-15 NEW concepts only (not in the list above)
+- id: unique snake_case (must not match any existing id: {', '.join(sorted(existing_ids)[:10])}…)
+- name: human-readable (1-4 words)
+- section: assign to one of the existing sections listed above
+- category: one of: fundamentals, oop, web, data, testing, tooling, advanced
+- difficulty: 1-5
+- estimated_minutes: 15-90
+- links: prerequisite relationships between the NEW nodes only
+- All source/target IDs must match IDs in THIS response only"""
+
+        try:
+            raw   = await _stream_collect(prompt)
+            nodes, links, _ = _parse_roadmap_json(raw)  # sections already saved in phase 1
+            if not nodes:
+                raise HTTPException(500, "AI returned no usable nodes")
+
+            new_ids = {n["id"] for n in nodes if "id" in n}
+            # guard: skip any node whose id collides with existing ones
+            nodes = [n for n in nodes if n.get("id","") not in existing_ids]
+            new_ids = {n["id"] for n in nodes}
+
+            with get_db() as db:
+                _save_roadmap_batch(db, tech_id, nodes, links, new_ids,
+                                    offset=len(existing_list))
+
+            return {"ok": True, "phase": 2, "nodes": len(nodes),
+                    "links": len(links), "total": len(existing_list) + len(nodes)}
+        except json.JSONDecodeError as e:
+            raise HTTPException(500, f"JSON parse error: {e}")
+
+
+@app.get("/api/roadmap/{tech_id}/graph")
+def roadmap_graph(tech_id: str):
+    with get_db() as db:
+        tech = db.execute("SELECT * FROM rm_technologies WHERE id=?", (tech_id,)).fetchone()
+        nodes = db.execute(
+            "SELECT * FROM rm_nodes WHERE tech_id=? ORDER BY priority", (tech_id,)
+        ).fetchall()
+        if not nodes:
+            return {"nodes": [], "links": [], "sections": []}
+        node_ids = {r["id"] for r in nodes}
+        links = db.execute("""
+            SELECT * FROM rm_links
+            WHERE source IN (SELECT id FROM rm_nodes WHERE tech_id=?)
+        """, (tech_id,)).fetchall()
+    sections = json.loads(tech["sections"] or "[]") if tech else []
+    return {
+        "nodes": [dict(r) for r in nodes],
+        "links": [dict(l) for l in links if l["target"] in node_ids],
+        "sections": sections,
+    }
+
+
+@app.post("/api/roadmap/nodes/{node_id}/expand")
+async def roadmap_expand_node(node_id: str):
+    """Generate 4-7 deeper sub-topics for a node and wire them into the graph."""
+    with get_db() as db:
+        node = db.execute("SELECT * FROM rm_nodes WHERE id=?", (node_id,)).fetchone()
+        if not node:
+            raise HTTPException(404, "Node not found")
+        tech_id = node["tech_id"]
+        tech = db.execute("SELECT * FROM rm_technologies WHERE id=?", (tech_id,)).fetchone()
+        existing_rows = db.execute(
+            "SELECT id, name FROM rm_nodes WHERE tech_id=? ORDER BY priority", (tech_id,)
+        ).fetchall()
+        max_priority = db.execute(
+            "SELECT COALESCE(MAX(priority),0) FROM rm_nodes WHERE tech_id=?", (tech_id,)
+        ).fetchone()[0]
+
+    tech_name     = tech["name"] if tech else tech_id
+    concept_name  = node["name"]
+    node_short_id = node_id.replace(f"{tech_id}_", "")
+
+    existing_short_ids = {r["id"].replace(f"{tech_id}_", "") for r in existing_rows}
+    existing_block = "\n".join(
+        f"- {r['name']} (id: {r['id'].replace(tech_id + '_', '')})"
+        for r in existing_rows
+    )
+
+    prompt = f"""You are expanding the concept "{concept_name}" inside a {tech_name} learning roadmap.
+
+Parent concept: "{concept_name}" (id: {node_short_id})
+
+Concepts already in the roadmap:
+{existing_block}
+
+Generate 4-7 deeper sub-topics that go specifically inside "{concept_name}".
+Each sub-topic must be a concrete technique, pattern, or sub-feature of "{concept_name}" — not a general topic.
+
+Return ONLY valid JSON, no markdown, no code blocks:
+{{
+  "nodes": [
+    {{"id": "unique_snake_case", "name": "Short Human Name", "category": "fundamentals|oop|web|data|testing|tooling|advanced", "difficulty": 1, "estimated_minutes": 30}}
+  ],
+  "links": [
+    {{"source": "source_short_id", "target": "target_short_id", "type": "prerequisite"}}
+  ]
+}}
+
+Rules:
+- Every new node MUST appear as a link target from "{node_short_id}": {{"source":"{node_short_id}","target":"<new_id>","type":"prerequisite"}}
+- Also add links between new nodes when one depends on another
+- Also add links from new nodes TO existing concepts when relevant (use their IDs above)
+- DO NOT reuse these IDs (already exist): {', '.join(sorted(existing_short_ids))}
+- difficulty 1-5, estimated_minutes 15-90
+- No duplicate IDs in this response"""
+
+    raw = await _stream_collect(prompt)
+    nodes, links, _ = _parse_roadmap_json(raw)
+    if not nodes:
+        raise HTTPException(500, "AI returned no usable nodes")
+
+    new_short_ids = {n["id"] for n in nodes if "id" in n}
+    all_valid_ids = new_short_ids | existing_short_ids   # links to existing nodes are valid
+
+    with get_db() as db:
+        _save_roadmap_batch(db, tech_id, nodes, links, all_valid_ids,
+                            offset=max_priority + 1,
+                            default_section=node["section"] or "")
+        # Guarantee parent → every new child link exists even if LLM missed it
+        for n in nodes:
+            db.execute(
+                "INSERT OR IGNORE INTO rm_links (source,target,type) VALUES (?,?,?)",
+                (node_id, f"{tech_id}_{n['id']}", "prerequisite"),
+            )
+
+    return {"ok": True, "new_nodes": len(nodes), "new_links": len(links)}
+
+
+@app.patch("/api/roadmap/nodes/{node_id}/status")
+def roadmap_set_status(node_id: str, body: dict):
+    status = body.get("status", "not_started")
+    if status not in {"not_started", "studying", "understood", "practiced", "mastered"}:
+        raise HTTPException(400, "Invalid status")
+    with get_db() as db:
+        db.execute("UPDATE rm_nodes SET status=? WHERE id=?", (status, node_id))
+    return {"ok": True, "status": status}
+
+
+@app.patch("/api/roadmap/nodes/{node_id}/notes")
+def roadmap_save_notes(node_id: str, body: dict):
+    notes = body.get("notes", "")
+    with get_db() as db:
+        db.execute("UPDATE rm_nodes SET personal_notes=? WHERE id=?", (notes, node_id))
+    return {"ok": True}
+
+
+@app.get("/api/roadmap/nodes/{node_id}/card")
+async def roadmap_node_card(node_id: str, force: bool = False):
+    """Stream an AI-generated learning card for a roadmap concept."""
+    with get_db() as db:
+        node = db.execute("SELECT * FROM rm_nodes WHERE id=?", (node_id,)).fetchone()
+        tech = None
+        if node:
+            tech = db.execute(
+                "SELECT * FROM rm_technologies WHERE id=?", (node["tech_id"],)
+            ).fetchone()
+
+    if not node:
+        raise HTTPException(404, "Node not found")
+
+    if node["ai_cache"] and not force:
+        cached = node["ai_cache"]
+        async def send_cached():
+            yield cached
+        return StreamingResponse(send_cached(), media_type="text/plain")
+
+    tech_name  = tech["name"] if tech else node["tech_id"]
+    concept    = node["name"]
+    difficulty = node["difficulty"] or 1
+
+    prompt = f"""You are teaching {tech_name} to an experienced systems engineer learning programming.
+Explain the concept: "{concept}" (difficulty {difficulty}/5)
+
+## WHAT IT IS
+A clear, concise definition in 2-3 sentences.
+
+## WHEN TO USE IT
+A concrete situation where you would apply this concept.
+
+## CODE EXAMPLE
+A short, realistic code snippet with a brief comment.
+
+## COMMON MISTAKES
+Three bullet points of mistakes beginners make.
+
+## ANALOGY
+One memorable analogy that makes this concept stick.
+
+Keep it brief, practical, and direct."""
+
+    full_text = []
+
+    async def generate():
+        try:
+            async for chunk in _llm_stream(prompt):
+                full_text.append(chunk)
+                yield chunk
+        except Exception as e:
+            yield f"\n\n[Error: {e}]"
+        finally:
+            if full_text:
+                try:
+                    with get_db() as db:
+                        db.execute(
+                            "UPDATE rm_nodes SET ai_cache=? WHERE id=?",
+                            ("".join(full_text), node_id)
+                        )
+                except Exception:
+                    pass
+
+    return StreamingResponse(generate(), media_type="text/plain")
 
 
 # ── SERVE FRONTEND ────────────────────────────────────────────
