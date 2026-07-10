@@ -3335,19 +3335,19 @@ function _rmRenderPath(){
   }
 }
 
-// BFS backwards: collect only ancestors (prerequisite chain) leading to startId
+// BFS both directions: ancestors (prerequisites) + descendants (what this unlocks)
 function _rmGetFullPath(startId){
-  const bwd = {};
+  const bwd = {}, fwd = {};
   rmLinks.forEach(l => {
     (bwd[l.target] = bwd[l.target]||[]).push(l.source);
+    (fwd[l.source] = fwd[l.source]||[]).push(l.target);
   });
   const visited = new Set([startId]);
   const queue   = [startId];
   while(queue.length){
     const cur = queue.shift();
-    (bwd[cur]||[]).forEach(id => {
-      if(!visited.has(id)){ visited.add(id); queue.push(id); }
-    });
+    (bwd[cur]||[]).forEach(id => { if(!visited.has(id)){ visited.add(id); queue.push(id); } });
+    (fwd[cur]||[]).forEach(id => { if(!visited.has(id)){ visited.add(id); queue.push(id); } });
   }
   return visited;
 }
