@@ -437,6 +437,11 @@ svg#graph{width:100%;height:100%;}
 .rm-pc-zoom-btns{position:absolute;bottom:14px;right:14px;z-index:10;display:flex;flex-direction:column;gap:4px;}
 .rm-clear-path-btn{position:absolute;top:14px;left:14px;z-index:10;background:rgba(13,17,23,.85);border:1px solid rgba(247,129,102,.5);color:#f78166;padding:5px 13px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;backdrop-filter:blur(4px);}
 .rm-clear-path-btn:hover{background:rgba(247,129,102,.15);border-color:#f78166;}
+/* expand queue badge */
+.rm-queue-badge{position:absolute;top:14px;right:14px;z-index:30;background:rgba(13,17,23,.92);border:1px solid rgba(63,185,80,.5);color:#3fb950;padding:5px 13px;border-radius:20px;font-size:11px;font-weight:600;backdrop-filter:blur(4px);display:none;gap:8px;align-items:center;}
+.rm-queue-badge.active{display:flex;}
+.rm-queue-spin{display:inline-block;animation:rmSpin .8s linear infinite;}
+@keyframes rmSpin{to{transform:rotate(360deg);}}
 .rm-pc-zoom-btns button{width:28px;height:28px;border-radius:6px;border:1px solid rgba(88,166,255,.3);background:rgba(13,17,23,.85);color:#8b949e;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:1;}
 .rm-pc-zoom-btns button:hover{border-color:var(--accent);color:var(--accent);}
 /* floating tooltip shown on node hover */
@@ -681,6 +686,10 @@ svg#graph{width:100%;height:100%;}
 
     <!-- GRAPH AREA -->
     <div class="rm-graph-area" id="rmGraphArea">
+      <div class="rm-queue-badge" id="rmQueueBadge">
+        <span class="rm-queue-spin">⟳</span>
+        <span id="rmQueueStatus">Expanding…</span>
+      </div>
       <svg id="rmGraph" style="display:none"></svg>
       <!-- PATH (column) VIEW -->
       <div class="rm-path-area" id="rmPathArea">
@@ -2493,6 +2502,8 @@ let rmViewMode    = 'graph'; // 'graph' | 'path'
 let _rmPathLinks  = [];      // [{glow,sharp,srcId,tgtId,col}]
 let _rmPathNodes  = new Map();// nodeId → {g,ring,circle,txt,catCol,isSel}
 let _rmPcZoomInst = null;
+let _rmExpandQueue   = [];   // [{id, name}] waiting to expand
+let _rmExpandRunning = false; // true while a request is in-flight
 
 async function openRoadmap(){
   document.getElementById('rmOverlay').classList.add('open');
@@ -3266,22 +3277,57 @@ function _rmRenderStatusBar(nodeId, currentStatus){
     }).join('');
 }
 
-async function rmExpandNode(){
+function rmExpandNode(){
   if(!rmSel) return;
+  const already = _rmExpandQueue.some(q=>q.id===rmSel.id) ||
+                  (_rmExpandRunning && _rmExpandQueue[0]?.id===rmSel.id);
+  if(already) return;
+
+  _rmExpandQueue.push({id: rmSel.id, name: rmSel.name});
+  _rmUpdateQueueBadge();
+
   const btn = document.getElementById('rmExpandBtn');
+  btn.textContent = '✓ Queued';
   btn.disabled = true;
-  btn.textContent = '⟳ Expanding…';
-  try{
-    const r = await fetch(`${API}/api/roadmap/nodes/${rmSel.id}/expand`, {method:'POST'});
-    if(!r.ok) throw new Error(await r.text());
-    const d = await r.json();
-    await rmLoadGraph();
-    btn.textContent = `✓ +${d.new_nodes} nodes`;
-    setTimeout(()=>{ btn.textContent='⊕ Expand'; btn.disabled=false; }, 2500);
-  }catch(e){
-    btn.textContent = '⚠ Failed';
-    setTimeout(()=>{ btn.textContent='⊕ Expand'; btn.disabled=false; }, 2000);
+  setTimeout(()=>{ btn.textContent='⊕ Expand'; btn.disabled=false; }, 1800);
+
+  _rmProcessExpandQueue();
+}
+
+function _rmUpdateQueueBadge(){
+  const badge  = document.getElementById('rmQueueBadge');
+  const status = document.getElementById('rmQueueStatus');
+  if(!_rmExpandRunning && _rmExpandQueue.length === 0){
+    badge.classList.remove('active');
+    return;
   }
+  badge.classList.add('active');
+  const total = _rmExpandQueue.length + (_rmExpandRunning ? 1 : 0);
+  const cur   = _rmExpandRunning ? (_rmExpandQueue.length > 0 ? _rmExpandQueue[0].name : '…') : _rmExpandQueue[0]?.name;
+  status.textContent = total > 1
+    ? `Expanding "${_rmExpandRunning ? '…' : cur}" · ${total} left`
+    : `Expanding "${cur || '…'}"`;
+}
+
+async function _rmProcessExpandQueue(){
+  if(_rmExpandRunning || _rmExpandQueue.length === 0) return;
+  _rmExpandRunning = true;
+
+  const item = _rmExpandQueue[0];
+  _rmUpdateQueueBadge();
+
+  try{
+    const r = await fetch(`${API}/api/roadmap/nodes/${item.id}/expand`, {method:'POST'});
+    if(!r.ok) throw new Error(await r.text());
+    await rmLoadGraph();
+  }catch(e){
+    console.error('Expand failed for', item.name, e);
+  }
+
+  _rmExpandQueue.shift();
+  _rmExpandRunning = false;
+  _rmUpdateQueueBadge();
+  _rmProcessExpandQueue(); // process next
 }
 
 async function rmLoadCard(){
