@@ -51,246 +51,157 @@ Good: `"When I click Expand on multiple nodes, instead of waiting for each one, 
 
 ---
 
-## All Project Requests — Rewritten in Good Format
+## All Project Requests — Written in Human Language
 
-These are the 22 changes made to this project, ordered from most recent to oldest, each rewritten as an example of a well-structured request.
+These are the 22 changes made to this project, from most recent to oldest.
+Each one shows how you could have written that request — natural, clear, enough detail for the AI to act without guessing.
 
 ---
 
 ### 22. Fix — Tooltip shows stale node name
 
-**How to write it:**
-> In the roadmap path view (`frontend/index.html`), in the `mouseenter` event on nodes, the tooltip still shows the name of the previously selected node when I hover a different node.
-> Fix it so the tooltip always updates to the hovered node's name regardless of whether another node is selected.
+> In the roadmap path view, when I hover over a node the tooltip still shows the name of the node I clicked before — not the one I'm hovering now. Fix it so the tooltip always updates to whatever node I'm pointing at.
 
 ---
 
 ### 21. Fix — Node labels hidden behind glow lines
 
-**How to write it:**
-> In the roadmap path view SVG, the text labels on nodes are rendered behind the bezier curve lines, making them unreadable.
-> Add a dark stroke outline behind each letter using SVG `paint-order:stroke` so the text is visible on top of the glow lines.
+> In the roadmap path view, the name text on each node is hidden behind the colored lines. I can barely read it. Add some kind of dark outline behind the letters so the text shows on top of everything.
 
 ---
 
 ### 20. Remove — "Learning Path" right panel
 
-**How to write it:**
-> In the roadmap overlay (`frontend/index.html`), remove the right-side "Learning Path" panel completely. It adds no value and takes up screen space.
+> In the roadmap, remove the right panel that shows "Learning Path". It doesn't give me any useful information, just takes up space.
 
 ---
 
-### 19. Multi-part change — Spanish request (5 items)
+### 19. Multi-part change — 5 things for the roadmap
 
-**How to write it:**
-> I have 5 separate changes for the roadmap:
+> I have several changes I want for the roadmap, let me list them:
 >
-> 1. **Fix BFS direction**: When I select a node, only show the ancestor chain (nodes that lead TO it from the start). Currently it highlights all directions — fix it to go backward only.
-> 2. **Fix all-paths bug**: Related to above — clicking one node should not highlight the entire graph.
-> 3. **Make left panel resizable**: The node names are cut off with `...`. Add a drag handle so I can resize the panel width.
-> 4. **Graph full page**: The graph area only fills half the screen. Make it fill 100% of height and width.
-> 5. **Redesign column headers**: The plain text headers at the top are hard to read. Replace them with styled pill badges that support word wrap up to 4 lines.
+> 1. When I click a node, it highlights every single node in the graph — that's a bug. I want it to only highlight the path that leads to that node from the beginning, like tracing back to the start.
+> 2. The left panel where the node names show is fixed and I can't make it wider. The names are getting cut off with "...". I want to be able to drag it to resize.
+> 3. The graph only fills about half the screen. I want it to take the full height and width of the page.
+> 4. The column labels at the top are plain text and hard to read. Redesign them as something better, like small badges or pills. If the name is long, break it into multiple lines instead of cutting it.
 
 ---
 
-### 18. Feature — Auto-generate column headers for new sections
+### 18. Confirm — Column headers appear automatically for new columns
 
-**How to write it:**
-> In the roadmap path view, when a new section is added (by expanding a node or generating), confirm that the column header pill badge is automatically created for it.
-> The headers should appear dynamically without any manual update.
+> When I expand a node and a new column appears in the roadmap path view, does the header for that column also appear automatically? Or do I have to do something manually? I want to confirm it works without any extra step.
 
 ---
 
-### 17. Feature — Add "✕ Clear path" button
+### 17. Feature — Button to clear the selected path
 
-**How to write it:**
-> In the roadmap path view (`frontend/index.html`), add a floating button that deselects the currently highlighted path.
-> It should appear in the top-left of the graph area only when a node is selected, and disappear when the path is cleared.
+> In the roadmap path view, after I click a node and the path gets highlighted, I want a button I can click to clear that selection and go back to the normal view. Put it somewhere visible on the graph, only show it when a node is selected, and hide it when I clear.
 
 ---
 
-### 16. Fix — Column headers truncating with ellipsis
+### 16. Fix — Column headers still cutting off with "..."
 
-**How to write it:**
-> In the roadmap path view, the pill badge column headers are still truncating long names with `...`.
-> Change them to use full text with up to 4 line breaks using SVG `<tspan>` elements. No ellipsis allowed.
+> The roadmap column headers are still showing "..." at the end of long names. I said no ellipsis — show the full name. If it doesn't fit in one line, break it into up to 4 lines.
 
 ---
 
-### 15. Fix — `TypeError: rmClearPathBtn is null`
+### 15. Fix — Error in console when I click a node
 
-**How to write it:**
-> In `frontend/index.html`, clicking a node throws:
+> I'm getting this error in the console when I click a node in the roadmap:
 > `TypeError: Cannot read properties of null (reading 'style') at rmSelectNode`
->
-> The bug is that `_rmRenderPath()` calls `area.innerHTML = ''` which destroys `#rmClearPathBtn`, then tries to reference it.
-> Fix: save both `#rmPcZoomBtns` and `#rmClearPathBtn` before clearing innerHTML, then re-append them after.
+> Find out what is causing it and fix it.
 
 ---
 
-### 14. Feature — Docker + Ollama setup (prepare only, do not run)
+### 14. Feature — Docker setup with Ollama (don't run it)
 
-**How to write it:**
-> Create a Docker setup for this project with Ollama included.
-> Files needed: `Dockerfile`, `docker-compose.yml`, `docker/ollama-init.sh`, `.dockerignore`.
-> Requirements:
-> - Ollama should not expose port 11434 to the host (use internal Docker network only)
-> - The app depends on Ollama being healthy (model fully downloaded) before starting
-> - DB should persist via a volume mount at `./data/vocabgraph.db`
-> - Do NOT run it — just prepare the files.
+> I want to containerize this project with Docker and include Ollama so the AI model runs inside the container too. Prepare all the files needed for that — Dockerfile, docker-compose, and whatever else is needed. But don't run it yet, I don't have enough disk space right now.
 
 ---
 
-### 13. Fix — Expanded children appear in same column as parent
+### 13. Fix — Expanded nodes appear in the same column as the parent
 
-**How to write it:**
-> In `main.py`, the expand endpoint (`POST /api/roadmap/nodes/{id}/expand`) places children in the same column as the parent.
-> Fix: assign expanded children to a new section named after the parent node, and insert that section right after the parent's section in `rm_technologies.sections`.
+> When I click Expand on a node in the roadmap, the new child nodes appear in the same column as the parent instead of creating a new column to the right. They should always go to a new column that comes after the parent.
 
 ---
 
-### 12. Fix — 500 error on expand endpoint
+### 12. Fix — 500 error when I expand a node
 
-**How to write it:**
-> `POST /api/roadmap/nodes/{id}/expand` returns 500 with:
+> Expanding a node gives a 500 error. The console shows:
 > `AttributeError: 'sqlite3.Row' object has no attribute 'get'`
->
-> In `main.py`, `sqlite3.Row` objects support `row["key"]` but NOT `row.get("key")`.
-> Find all occurrences of `.get("sections")` on sqlite3.Row objects and replace with `["sections"]`.
+> Fix it.
 
 ---
 
-### 11. Feature — Left-to-right expansion constraint
+### 11. Feature — Graph should always grow left to right
 
-**How to write it:**
-> In the roadmap force-directed graph (`_rmRenderGraph` in `frontend/index.html`), nodes can appear in any x position regardless of their section order.
-> Add a `d3.forceX` force based on section index from `rmSections` so nodes are always pushed left-to-right by section.
-> Earlier sections = left side, later sections = right side. Strength ~0.35 so it guides without locking.
+> In the roadmap graph view, when I expand nodes the new ones sometimes appear to the left or behind other nodes. I want the graph to always flow left to right — earlier concepts on the left, more advanced ones on the right. Add that as a restriction so it never goes backwards.
 
 ---
 
-### 10. Reference — Ollama prompts artifact
+### 10. Reference — Show me all the prompts sent to Ollama
 
-**How to write it:**
-> Create a visual reference page (artifact) showing all 12 prompts sent to Ollama in this project.
-> Group them by category (Vocabulary, Roadmap).
-> For each prompt show: HTTP method, endpoint, one-line purpose, full prompt text with `{variables}` highlighted, and response type (streaming / JSON / plain text).
+> I want to see all the prompts this app sends to Ollama in one place so I can understand how it communicates with the AI. Create a page or document that lists all of them, organized by what they do.
 
 ---
 
-### 9. Remove — Estimated minutes field
+### 9. Remove — The "~75 min" time estimate
 
-**How to write it:**
-> Remove `estimated_minutes` completely from the project because it is unreliable.
-> Locations to clean up:
-> - Tooltip in path view (`mouseenter` event)
-> - Detail panel meta row (`rmMeta` innerHTML)
-> - AI prompt schema in `main.py` (all 3 prompts that include it)
-> - DB INSERT in `_save_roadmap_batch`
-> - CSS class `.rm-time`
+> The nodes show something like "★★★☆☆ ~75 min" — I don't know where that 75 minutes comes from and I don't trust it. Remove that time estimate everywhere it appears. Keep the stars rating but get rid of the minutes.
 
 ---
 
-### 8. Fix — Zoom resets after changing node status
+### 8. Fix — Changing a node's status resets the zoom
 
-**How to write it:**
-> In the roadmap path view, clicking "Got it" or any status button calls `_rmRefreshNodeColors()` → `_rmRenderPath()` which completely re-renders the SVG and resets pan/zoom to the initial fitted transform.
-> Fix: before clearing `area.innerHTML`, save the current `d3.zoomTransform` from the SVG element. After creating the new zoom instance, apply the saved transform instead of `initT`.
+> In the roadmap path view, when I click "Got it" or any of the status buttons on a node, the whole graph resets and I lose my zoom position. I want it to stay exactly where I was — same zoom, same position — after I change the status.
 
 ---
 
-### 7. Feature — Expand queue for multiple nodes
+### 7. Feature — Queue for expanding multiple nodes
 
-**How to write it:**
-> In the roadmap (`frontend/index.html`), currently clicking Expand sends one request and blocks the UI.
-> Add a queue system so I can click Expand on multiple nodes quickly:
-> - Each click adds the node to a queue and shows "✓ Queued" on the button
-> - Process one at a time (sequential, not parallel — Ollama can't handle parallel)
-> - Show a floating green badge at bottom-right: "Expanding 'X' · 3 left"
-> - Reload the graph after each successful expand
-> - Skip duplicate entries (same node already in queue)
+> Right now if I want to expand several nodes I have to wait for each one to finish before clicking the next. I want to be able to click Expand on many nodes one after another without waiting, and the app processes them one by one in the background. Show me somewhere on screen how many are pending.
 
 ---
 
-### 6. Feature — Dynamic topic management (add / delete / overflow)
+### 6. Feature — Add and delete topics, handle more than 5
 
-**How to write it:**
-> The roadmap technologies are currently hardcoded in `RM_TECHS` in `frontend/index.html`.
-> Replace with dynamic loading from `GET /api/roadmap/technologies` and add:
->
-> **Backend** (`main.py`):
-> - `POST /api/roadmap/technologies` — create new tech (auto-generate slug ID from name)
-> - `DELETE /api/roadmap/technologies/{id}` — cascade delete all nodes and links
->
-> **Frontend**:
-> - Auto-assign emoji by tech name (map of ~30 common techs, fallback to 📚)
-> - Show max 5 tabs; if more, show a "+N" chip that opens a dropdown with the overflow items
-> - Each tab has a "×" delete button visible on hover, with confirmation dialog
-> - Inline "＋" button that expands to a text input for adding a new topic
-> - After add/delete, reload the list from API and switch to the first tech
+> The roadmap currently only has Ruby on Rails and C# hardcoded. I want to:
+> - Add new topics from the UI, like typing "TypeScript" and it creates one
+> - Delete topics I don't want anymore
+> - If I have more than 5 topics, don't show them all as tabs — show 5 and a "+N" button that opens a list of the rest
+> - Each topic tab should have a small delete button on hover
 
 ---
 
-### 5. Feature — Node search in roadmap header
+### 5. Feature — Search for a node in the roadmap
 
-**How to write it:**
-> In the roadmap header (`frontend/index.html`), add a search input that:
-> - Appears next to the other header controls when a roadmap is loaded
-> - Filters nodes by name as you type, showing up to 8 results in a dropdown
-> - Highlights the matching text in amber in each result
-> - On select: opens the detail panel for that node, switches to graph view, and pans/animates the graph to center on the node
-> - Arrow keys + Enter navigate the dropdown; Escape closes it
+> Add a search box somewhere in the roadmap header so I can type a node name and jump to it. When I select a result it should open that node's detail panel and move the graph to show that node in the center.
 
 ---
 
-### 4. Feature — Move queue badge to bottom-right
+### 4. Move — Queue badge to bottom right
 
-**How to write it:**
-> In `frontend/index.html`, the floating queue badge (`#rmQueueBadge`) is positioned at `top:14px;right:14px`.
-> Move it to `bottom:14px;right:14px`.
+> The badge that shows "AI Card 'Polymorphism' · 3 left" is appearing at the top right. Move it to the bottom right corner.
 
 ---
 
-### 3. Feature — AI Card queue (regenerate + queue)
+### 3. Feature — Queue for AI Card, also allow regenerating
 
-**How to write it:**
-> In the roadmap detail panel (`frontend/index.html`), the "✦ AI Card" button currently sends one request and blocks.
-> Add the same queue system as Expand:
-> - Clicking the button adds the node to `_rmCardQueue` and shows "✓ Queued"
-> - Process one at a time
-> - If the node being generated is currently open in the panel, stream the output live
-> - If it is a background node, silently update `node.ai_cache` — when you later open that node, the fresh card shows
-> - When you navigate to a node that is in the queue, show "⟳ In queue" on the button (disabled)
-> - Share the same badge as the expand queue: "Expanding (2) · AI Card 'X' · 1 left"
+> The AI Card button in the roadmap only lets me load it once. I want two things:
+> - Be able to regenerate the card for a node I already loaded, to get fresh information
+> - Same queue behavior as Expand — I can click AI Card on several nodes and they process one by one in the background. If I'm looking at the node that's currently being generated, I see it streaming live. If it's a different node, it just updates quietly in the background.
 
 ---
 
-### 2. Feature — Right-click definition popup on vocab graph nodes
+### 2. Feature — Right-click on a word to search its definition
 
-**How to write it:**
-> In the main vocab graph (`frontend/index.html`), add a right-click context menu on D3 nodes.
-> Menu options:
-> - "✦ Search Definition" — opens a centered popup modal
-> - "→ Open in panel" — same as normal left-click
->
-> The definition popup should:
-> - Show the word name and category in the header
-> - Check in-memory cache (`aiCache`) and server cache first; only call AI if not cached
-> - Stream from `GET /api/ai/stream/{word}` and display live while streaming
-> - On complete, format into sections: Definition, Examples (with word highlighted), How to use, Ideas to remember
-> - Include a "↺ Regenerate" button that clears cache and re-streams
-> - Close on backdrop click or Escape key
-> - Reuse the existing `parseCard(raw)` function for parsing
+> In the main vocabulary graph, when I right-click on a word node I want a small menu to appear with an option like "Search Definition". Clicking that opens a popup that asks the AI for the definition, examples, how to use it, and ideas to remember it — all in one popup. Similar to what the detail panel shows but without having to select the node.
 
 ---
 
-### 1. Fix — Selection does not highlight descendant nodes
+### 1. Fix — Selecting a node only highlights nodes behind it, not in front
 
-**How to write it:**
-> In `_rmGetFullPath` (`frontend/index.html`), the BFS only traverses backward (ancestor chain: nodes that lead TO the selected node).
-> This means when I select "OOP Basics", nodes that come AFTER it are not highlighted — only its prerequisites are.
-> Fix: traverse BOTH directions — backward (ancestors/prerequisites) AND forward (descendants/what this unlocks).
-> Use two maps: `bwd[target] → [sources]` and `fwd[source] → [targets]`, and BFS both in the same queue.
+> In the roadmap path view, when I select a node like "OOP Basics" it only highlights the nodes that come before it — the ones that lead to it. But it doesn't highlight what comes after, the nodes that OOP Basics leads to. I need to see both directions: where it came from and where it goes.
 
 ---
 
