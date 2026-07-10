@@ -1180,6 +1180,38 @@ def roadmap_technologies():
     return {"technologies": [dict(r) for r in rows]}
 
 
+@app.post("/api/roadmap/technologies")
+def roadmap_add_technology(body: dict):
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(400, "name required")
+    tech_id = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+    desc = body.get("description", "")
+    with get_db() as db:
+        existing = db.execute("SELECT id FROM rm_technologies WHERE id=?", (tech_id,)).fetchone()
+        if existing:
+            raise HTTPException(409, f"Technology '{tech_id}' already exists")
+        db.execute(
+            "INSERT INTO rm_technologies (id, name, description) VALUES (?,?,?)",
+            (tech_id, name, desc),
+        )
+    return {"ok": True, "id": tech_id, "name": name}
+
+
+@app.delete("/api/roadmap/technologies/{tech_id}")
+def roadmap_delete_technology(tech_id: str):
+    with get_db() as db:
+        db.execute(
+            """DELETE FROM rm_links
+               WHERE source IN (SELECT id FROM rm_nodes WHERE tech_id=?)
+                  OR target IN (SELECT id FROM rm_nodes WHERE tech_id=?)""",
+            (tech_id, tech_id),
+        )
+        db.execute("DELETE FROM rm_nodes WHERE tech_id=?", (tech_id,))
+        db.execute("DELETE FROM rm_technologies WHERE id=?", (tech_id,))
+    return {"ok": True}
+
+
 @app.patch("/api/roadmap/technologies/{tech_id}/focus")
 def roadmap_set_focus(tech_id: str, body: dict):
     focus = body.get("focus", "").strip()
