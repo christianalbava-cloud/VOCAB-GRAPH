@@ -606,9 +606,91 @@ svg#graph{width:100%;height:100%;}
 .wp-loading{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:12px;padding:30px 10px;}
 .wp-loading .spin{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
 .wp-msg{font-size:12.5px;color:var(--muted);text-align:center;padding:24px 10px;}
+
+/* ── LOGIN OVERLAY ───────────────────────────────────────── */
+#loginOverlay{
+  position:fixed;inset:0;z-index:9999;
+  background:#0d1117;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;
+}
+.login-card{
+  background:#161b22;border:1px solid #30363d;border-radius:16px;
+  padding:44px 48px;width:360px;max-width:92vw;
+  box-shadow:0 24px 64px rgba(0,0,0,.6);
+  display:flex;flex-direction:column;align-items:center;gap:0;
+}
+.login-logo{
+  width:56px;height:56px;border-radius:14px;
+  background:linear-gradient(135deg,#58a6ff 0%,#3fb950 100%);
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;font-weight:800;color:#0d1117;margin-bottom:18px;
+  letter-spacing:-1px;
+}
+.login-title{font-size:22px;font-weight:700;color:#e6edf3;margin-bottom:4px;}
+.login-sub{font-size:12px;color:#8b949e;margin-bottom:28px;}
+.login-field{
+  width:100%;padding:10px 14px;margin-bottom:12px;
+  background:#0d1117;border:1px solid #30363d;border-radius:8px;
+  color:#e6edf3;font-size:13px;font-family:inherit;
+  outline:none;box-sizing:border-box;
+  transition:border-color .15s;
+}
+.login-field:focus{border-color:#58a6ff;}
+.login-btn{
+  width:100%;padding:11px;margin-top:4px;
+  background:#238636;border:1px solid #2ea043;border-radius:8px;
+  color:#fff;font-size:13px;font-weight:600;font-family:inherit;
+  cursor:pointer;transition:background .15s;
+}
+.login-btn:hover{background:#2ea043;}
+.login-btn:disabled{opacity:.5;cursor:default;}
+.login-err{
+  width:100%;min-height:18px;font-size:12px;color:#f78166;
+  text-align:center;margin-top:8px;
+}
+.login-footer{font-size:11px;color:#484f58;margin-top:20px;}
+/* role badge in nav */
+.vg-user-badge{
+  display:flex;align-items:center;gap:7px;
+  font-size:11px;color:#8b949e;cursor:default;
+  flex-shrink:0;
+}
+.vg-user-role{
+  padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;
+  background:rgba(88,166,255,.12);color:#58a6ff;border:1px solid rgba(88,166,255,.3);
+}
+.vg-user-role.admin{
+  background:rgba(210,168,255,.12);color:#d2a8ff;border-color:rgba(210,168,255,.3);
+}
+.vg-logout{
+  background:none;border:1px solid #30363d;border-radius:6px;
+  color:#8b949e;font-size:10px;padding:2px 8px;cursor:pointer;
+  font-family:inherit;transition:all .15s;
+}
+.vg-logout:hover{border-color:#58a6ff;color:#58a6ff;}
+/* Hide admin-only elements for visitor role */
+body.role-visitor .admin-only{ display:none !important; }
+
 </style>
 </head>
 <body>
+<!-- ── LOGIN OVERLAY ───────────────────────────────────────── -->
+<div id="loginOverlay">
+  <div class="login-card">
+    <div class="login-logo">VG</div>
+    <div class="login-title">VocabGraph</div>
+    <div class="login-sub">Sign in to continue</div>
+    <input class="login-field" id="loginUser" type="text"     placeholder="Username"
+           autocomplete="username"         onkeydown="if(event.key==='Enter')_doLogin()"/>
+    <input class="login-field" id="loginPass" type="password" placeholder="Password"
+           autocomplete="current-password" onkeydown="if(event.key==='Enter')_doLogin()"/>
+    <button class="login-btn" id="loginBtn" onclick="_doLogin()">Sign In</button>
+    <div class="login-err" id="loginErr"></div>
+    <div class="login-footer">VocabGraph · private</div>
+  </div>
+</div>
+
 
 <header>
   <span class="logo">VOCAB·GRAPH</span>
@@ -641,8 +723,13 @@ svg#graph{width:100%;height:100%;}
   <button class="hbtn" onclick="openRoadmap()">🗺 Roadmap</button>
   <button class="hbtn" onclick="openDetective()">🔍 Detective</button>
   <button class="hbtn" onclick="exportGraph()">⬇ Export</button>
-  <button class="hbtn" onclick="openImportModal()">⬆ Import</button>
-  <button class="hbtn primary" onclick="openModal()">+ Add Word</button>
+  <button class="hbtn admin-only" onclick="openImportModal()">⬆ Import</button>
+  <button class="hbtn primary admin-only" onclick="openModal()">+ Add Word</button>
+  <div id="vgUserBadge" class="vg-user-badge" style="display:none;margin-left:auto">
+    <span id="vgUserName"></span>
+    <span id="vgUserRole" class="vg-user-role"></span>
+    <button class="vg-logout" onclick="_doLogout()">Sign out</button>
+  </div>
 </header>
 
 <div class="legend">
@@ -687,7 +774,7 @@ svg#graph{width:100%;height:100%;}
       <button class="regen-btn" id="speakBtn" title="Listen to pronunciation" onclick="speakWord()">🔊</button>
       <button class="regen-btn" id="regenBtn" title="Re-research with Ollama" onclick="forceResearch()">↻</button>
       <button class="regen-btn" title="Focus node in graph" onclick="focusSelected()">👁</button>
-      <div class="del-wrap" id="delWrap">
+      <div class="del-wrap admin-only" id="delWrap">
         <button class="del-btn" id="delBtn" title="Remove word" onclick="askDeleteNode()">🗑</button>
         <div class="del-confirm" id="delConfirm">
           <span>Remove permanently?</span>
@@ -725,6 +812,8 @@ svg#graph{width:100%;height:100%;}
   </div>
 </div>
 
+
+
 <!-- NODE CONTEXT MENU -->
 <div class="vcx-menu" id="vcxMenu">
   <div class="vcx-item" id="vcxItemDef" onclick="vcxOpenDef()">
@@ -757,8 +846,8 @@ svg#graph{width:100%;height:100%;}
   <div class="rm-hdr">
     <span class="rm-title">🗺 KNOWLEDGE ROADMAP</span>
     <div class="rm-tech-tabs" id="rmTechTabs"></div>
-    <div id="rmTechAddBtn" class="rm-tech-add" onclick="rmShowAddTech()" title="Add topic">＋</div>
-    <div id="rmTechAddForm" style="display:none" class="rm-tech-add-wrap">
+    <div id="rmTechAddBtn" class="rm-tech-add admin-only" onclick="rmShowAddTech()" title="Add topic">＋</div>
+    <div id="rmTechAddForm" style="display:none" class="rm-tech-add-wrap admin-only">
       <input class="rm-tech-add-input" id="rmTechAddInput" placeholder="e.g. TypeScript"
              onkeydown="if(event.key==='Enter')rmConfirmAddTech();if(event.key==='Escape')rmCancelAddTech()" autocomplete="off"/>
       <button class="rm-tech-add-ok" onclick="rmConfirmAddTech()">Add</button>
@@ -776,7 +865,7 @@ svg#graph{width:100%;height:100%;}
              autocomplete="off"/>
       <div class="rm-search-drop" id="rmSearchDrop" style="display:none"></div>
     </div>
-    <button class="rm-regen-btn" id="rmRegenBtn" onclick="rmRegenClick(this)" style="display:none">↺ Regenerate</button>
+    <button class="rm-regen-btn admin-only" id="rmRegenBtn" onclick="rmRegenClick(this)" style="display:none">↺ Regenerate</button>
     <button class="rm-close" onclick="closeRoadmap()">×</button>
   </div>
 
@@ -852,7 +941,7 @@ svg#graph{width:100%;height:100%;}
         <div class="rm-det-top">
           <button class="rm-det-close" onclick="rmClearSelection()" title="Close">×</button>
           <div class="rm-concept-name" id="rmConceptName">—</div>
-          <button class="rm-expand-btn" id="rmExpandBtn" onclick="rmExpandNode()">⊕ Expand</button>
+          <button class="rm-expand-btn admin-only" id="rmExpandBtn" onclick="rmExpandNode()">⊕ Expand</button>
           <button class="rm-gen-card-btn" id="rmLoadCardBtn" onclick="rmLoadCard()">✦ AI Card</button>
         </div>
         <div class="rm-meta" id="rmMeta"></div>
@@ -1133,7 +1222,7 @@ async function checkHealth(){
   const dot=document.getElementById('apiDot');
   const lbl=document.getElementById('apiLabel');
   try{
-    const r=await fetch(`${API}/api/health`);
+    const r=await apiFetch(`/api/health`);
     const d=await r.json();
     if(d.api==='ok' && d.ollama){
       dot.className='sdot ok';
@@ -1160,8 +1249,8 @@ async function loadGraph(){
   let ns, ls;
   try {
     [ns,ls] = await Promise.all([
-      fetch(`${API}/api/nodes`).then(r=>{ if(!r.ok) throw new Error(`nodes ${r.status}`); return r.json(); }),
-      fetch(`${API}/api/links`).then(r=>{ if(!r.ok) throw new Error(`links ${r.status}`); return r.json(); }),
+      apiFetch(`/api/nodes`).then(r=>{ if(!r.ok) throw new Error(`nodes ${r.status}`); return r.json(); }),
+      apiFetch(`/api/links`).then(r=>{ if(!r.ok) throw new Error(`links ${r.status}`); return r.json(); }),
     ]);
   } catch(e) {
     document.getElementById('nodeCount').textContent = `⚠ API unreachable — restart the server (${e.message})`;
@@ -1235,12 +1324,28 @@ function srchPick(idx){
 function srchClose(){ document.getElementById('srchDrop').style.display='none'; srchResults=[]; srchIdx=-1; }
 document.addEventListener('click', e=>{ if(!e.target.closest('.srch-wrap')) srchClose(); });
 
+// ── AUTH HELPERS ──────────────────────────────────
+function _authToken(){ return localStorage.getItem('vg_token') || ''; }
+function _authRole(){  return localStorage.getItem('vg_role')  || ''; }
+
+async function apiFetch(path, opts = {}) {
+  const token = _authToken();
+  const headers = { ...(opts.headers || {}) };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (opts.body && typeof opts.body === 'string' && !headers['Content-Type'])
+    headers['Content-Type'] = 'application/json';
+  const r = await fetch(`${API}${path}`, { ...opts, headers });
+  if (r.status === 401) { _showLogin('Session expired — please sign in again.'); throw new Error('Unauthorized'); }
+  return r;
+}
+
 async function apiPost(url, body){
-  const r=await fetch(`${API}${url}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const r = await apiFetch(url, { method:'POST', body: JSON.stringify(body) });
   return r.json();
 }
 async function apiDelete(url){
-  return fetch(`${API}${url}`,{method:'DELETE'}).then(r=>r.json());
+  const r = await apiFetch(url, { method:'DELETE' });
+  return r.json();
 }
 
 // ══════════════════════════════════════════════
@@ -1384,14 +1489,14 @@ function showDetail(id,cat){
   document.querySelectorAll('.dtab').forEach(t=>t.classList.toggle('on',t.dataset.tab==='learn'));
   // load saved image URL from DB if not already in memory cache
   if(cat==='concept' && !imageCache[id]){
-    fetch(`${API}/api/nodes/${encodeURIComponent(id)}/image`)
+    apiFetch(`/api/nodes/${encodeURIComponent(id)}/image`)
       .then(r=>r.ok?r.json():null)
       .then(d=>{ if(d&&d.image_url){ imageCache[id]={url:d.image_url,caption:''}; } })
       .catch(()=>{});
   }
   // check AI text cache from server
   if(aiCache[id]){ renderTab(id,cat); return; }
-  fetch(`${API}/api/nodes/${encodeURIComponent(id)}/cache`)
+  apiFetch(`/api/nodes/${encodeURIComponent(id)}/cache`)
     .then(r=>r.ok?r.json():null)
     .then(d=>{ if(d&&d.cache){ aiCache[id]=d.cache; renderTab(id,cat); } else streamDetail(id,cat); })
     .catch(()=>streamDetail(id,cat));
@@ -1419,7 +1524,7 @@ async function streamDetail(id,cat){
   let full='';
   try{
     const params=new URLSearchParams({cat,notes:n.notes||''});
-    const r=await fetch(`${API}/api/ai/stream/${encodeURIComponent(id)}?${params}`);
+    const r=await apiFetch(`/api/ai/stream/${encodeURIComponent(id)}?${params}`);
     const reader=r.body.getReader(); const dec=new TextDecoder();
     while(true){
       const {done,value}=await reader.read(); if(done) break;
@@ -1547,7 +1652,7 @@ async function computeSimilarity(id,cat){
     const strong=d.results.filter(r=>r.score>=.5);
     if(strong.length) await apiPost('/api/links/batch',strong.map(r=>({source:id,target:r.word,score:r.score,reason:r.reason,link_type:'semantic'})));
     // save sim cache to server
-    fetch(`${API}/api/sim/${encodeURIComponent(id)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({results:d.results})});
+    apiFetch(`/api/sim/${encodeURIComponent(id)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({results:d.results})});
     await loadGraph(); hlNode(id);
     renderSimTab(id,simCache[id]);
   } catch(e){
@@ -1583,7 +1688,7 @@ async function streamTenses(id){
   let full='';
   const so=document.getElementById('sOut');
   try{
-    const r=await fetch(`${API}/api/ai/tenses/${encodeURIComponent(id)}`);
+    const r=await apiFetch(`/api/ai/tenses/${encodeURIComponent(id)}`);
     const reader=r.body.getReader(); const dec=new TextDecoder();
     while(true){ const {done,value}=await reader.read(); if(done)break; full+=dec.decode(value); if(so)so.textContent=full; }
     tensesCache[id]=full;
@@ -1771,7 +1876,7 @@ async function confirmDeleteNode(){
   cancelDeleteNode();
   if(!selectedId) return;
   const id = selectedId;
-  await fetch(`${API}/api/nodes/${encodeURIComponent(id)}`, {method:'DELETE'});
+  await apiFetch(`/api/nodes/${encodeURIComponent(id)}`, {method:'DELETE'});
   closeDetail();
   nodes = nodes.filter(n=>n.id!==id);
   links = links.filter(l=>{
@@ -1799,7 +1904,7 @@ async function pickCat(cat){
   if(!selectedId) return;
   const n = nodes.find(v=>v.id===selectedId); if(!n) return;
   if(n.cat === cat) return;
-  await fetch(`${API}/api/nodes/${encodeURIComponent(selectedId)}/category`, {
+  await apiFetch(`/api/nodes/${encodeURIComponent(selectedId)}/category`, {
     method:'PATCH', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({cat})
   });
@@ -1828,7 +1933,7 @@ function onNewWordInput(val){
     suggest.classList.add('show');
     chip.style.display = 'none';
     try {
-      const res = await fetch(`${API}/api/ai/suggest-category`, {
+      const res = await apiFetch(`/api/ai/suggest-category`, {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({word: val.trim()})
       }).then(r=>r.json());
@@ -1864,7 +1969,7 @@ async function fetchConceptImage(id){
   renderTab(id,'concept');
   try{
     // ask qwen (via backend) to write a short visual scene description
-    const vr=await fetch(`${API}/api/ai/visual-prompt/${encodeURIComponent(id)}`);
+    const vr=await apiFetch(`/api/ai/visual-prompt/${encodeURIComponent(id)}`);
     const vd=await vr.json();
     const visualPrompt=(vd.prompt||id).trim();
     const encoded=encodeURIComponent(`${visualPrompt}, clean digital illustration, minimal, flat design`);
@@ -1967,7 +2072,7 @@ async function doSaveWord(word, cat, notes){
       if(d.results&&d.results.length){
         simCache[word]=d.results;
         await apiPost('/api/links/batch',d.results.map(r=>({source:word,target:r.word,score:r.score,reason:r.reason,link_type:'semantic'})));
-        fetch(`${API}/api/sim/${encodeURIComponent(word)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({results:d.results})});
+        apiFetch(`/api/sim/${encodeURIComponent(word)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({results:d.results})});
         await loadGraph(); hlNode(word);
       }
     });
@@ -2013,7 +2118,7 @@ async function pbAnalyze(){
   const so=document.getElementById('sOut');
   let full='';
   try{
-    const r=await fetch(`${API}/api/ai/phrase`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({words:pbWords})});
+    const r=await apiFetch(`/api/ai/phrase`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({words:pbWords})});
     const reader=r.body.getReader(); const dec=new TextDecoder();
     while(true){ const {done,value}=await reader.read(); if(done)break; full+=dec.decode(value); if(so)so.textContent=full; }
     const phraseId=pbWords.join(' ');
@@ -2041,7 +2146,7 @@ function openStatsDrawer(){
 async function loadTrustStats(){
   const klColors = {new:'#8b949e', learned:'#e3b341', mastered:'#3fb950', forgotten:'#f78166'};
   try{
-    const d = await fetch(`${API}/api/stats/trust`).then(r=>r.json());
+    const d = await apiFetch(`/api/stats/trust`).then(r=>r.json());
     const total = d.total_words || 1;
     const kls = ['mastered','learned','new','forgotten'];
     let html = '<div class="kl-dist">';
@@ -2126,7 +2231,7 @@ function buildStatsCard(){
 //  EXPORT
 // ══════════════════════════════════════════════
 async function exportGraph(){
-  const d = await fetch(`${API}/api/export`).then(r=>r.json());
+  const d = await apiFetch(`/api/export`).then(r=>r.json());
   const blob = new Blob([JSON.stringify(d, null, 2)], {type:'application/json'});
   const url  = URL.createObjectURL(blob);
   const ts   = new Date().toISOString().slice(0,10);
@@ -2218,7 +2323,7 @@ async function runImport(){
   btn.textContent = 'Importing…';
 
   try {
-    const res = await fetch(`${API}/api/import`, {
+    const res = await apiFetch(`/api/import`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
@@ -2380,7 +2485,7 @@ async function loadChallenge(){
   body.innerHTML = `<div class="loading"><div class="spin"></div>Picking a word from your vocabulary…</div>`;
   detCurrentWord = null; detAnswered = false;
   try{
-    const d = await fetch(`${API}/api/detective/challenge?level=${detLevel}`).then(r=>{
+    const d = await apiFetch(`/api/detective/challenge?level=${detLevel}`).then(r=>{
       if(!r.ok) throw new Error('Not enough words with definitions yet');
       return r.json();
     });
@@ -2420,7 +2525,7 @@ function submitGuess(){
   detAnswered = true;
   const correct = guess === detCurrentWord.word.toLowerCase();
   showDetResult(correct ? 'correct' : 'wrong', detCurrentWord.word, guess);
-  fetch(`${API}/api/detective/result`,{
+  apiFetch(`/api/detective/result`,{
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({word: detCurrentWord.word, correct})
   }).then(r=>r.json()).then(upd=>{
@@ -2433,7 +2538,7 @@ function revealAnswer(){
   if(!detCurrentWord || detAnswered) return;
   detAnswered = true;
   showDetResult('revealed', detCurrentWord.word, null);
-  fetch(`${API}/api/detective/result`,{
+  apiFetch(`/api/detective/result`,{
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({word: detCurrentWord.word, correct: false})
   }).catch(()=>{});
@@ -2475,7 +2580,7 @@ async function loadReview(){
   const body = document.getElementById('revBody');
   body.innerHTML = `<div class="loading"><div class="spin"></div>Loading next word to review…</div>`;
   try{
-    const d = await fetch(`${API}/api/review/next`).then(r=>{
+    const d = await apiFetch(`/api/review/next`).then(r=>{
       if(!r.ok) throw new Error('none');
       return r.json();
     });
@@ -2550,7 +2655,7 @@ async function submitReview(){
   document.getElementById('revNext').style.display='';
 
   try{
-    const upd = await fetch(`${API}/api/review/answer`,{
+    const upd = await apiFetch(`/api/review/answer`,{
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({word: revData.word, correct})
     }).then(r=>r.json());
@@ -2657,7 +2762,7 @@ async function openRoadmap(){
 
 async function _rmLoadTechnologies(){
   try{
-    const r = await fetch(`${API}/api/roadmap/technologies`);
+    const r = await apiFetch(`/api/roadmap/technologies`);
     const d = await r.json();
     rmTechList = (d.technologies||[]).map(t=>({
       id: t.id, name: t.name,
@@ -2682,7 +2787,7 @@ function _rmBuildTabs(){
   wrap.innerHTML = visible.map(t => `
     <button class="rm-tech-tab${rmTech===t.id?' on':''}" onclick="rmSwitchTech('${t.id}')">
       ${t.emoji} ${t.name}
-      <span class="rm-tech-tab-del" onclick="event.stopPropagation();rmDeleteTech('${t.id}','${t.name}')" title="Delete">×</span>
+      <span class="rm-tech-tab-del admin-only" onclick="event.stopPropagation();rmDeleteTech('${t.id}','${t.name}')" title="Delete">×</span>
     </button>`
   ).join('');
 
@@ -2695,7 +2800,7 @@ function _rmBuildTabs(){
           ${hidden.map(t=>`
             <div class="rm-tech-overflow-item${rmTech===t.id?' on':''}" onclick="event.stopPropagation();rmSwitchTech('${t.id}');rmCloseOverflow()">
               ${t.emoji} ${t.name}
-              <button class="rm-tech-overflow-item-del" onclick="event.stopPropagation();rmDeleteTech('${t.id}','${t.name}')" title="Delete">×</button>
+              <button class="rm-tech-overflow-item-del admin-only" onclick="event.stopPropagation();rmDeleteTech('${t.id}','${t.name}')" title="Delete">×</button>
             </div>`).join('')}
         </div>
       </div>`);
@@ -2736,7 +2841,7 @@ async function rmConfirmAddTech(){
   const name = document.getElementById('rmTechAddInput').value.trim();
   if(!name) return;
   try{
-    const r = await fetch(`${API}/api/roadmap/technologies`, {
+    const r = await apiFetch(`/api/roadmap/technologies`, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({name}),
     });
@@ -2755,7 +2860,7 @@ async function rmConfirmAddTech(){
 async function rmDeleteTech(techId, techName){
   if(!confirm(`Delete "${techName}" and all its nodes? This cannot be undone.`)) return;
   try{
-    await fetch(`${API}/api/roadmap/technologies/${techId}`, {method:'DELETE'});
+    await apiFetch(`/api/roadmap/technologies/${techId}`, {method:'DELETE'});
     if(rmTech === techId) rmTech = null;
     await _rmLoadTechnologies();
     if(rmTechList.length){
@@ -2834,7 +2939,7 @@ async function rmSaveFocus(){
   const focus = tags.join(', ');
   rmFocusMap[rmTech] = focus;
   try{
-    await fetch(`${API}/api/roadmap/technologies/${rmTech}/focus`, {
+    await apiFetch(`/api/roadmap/technologies/${rmTech}/focus`, {
       method:'PATCH', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({focus}),
     });
@@ -2849,7 +2954,7 @@ async function rmRemoveFocusTag(idx){
   const focus = tags.join(', ');
   rmFocusMap[rmTech] = focus;
   try{
-    await fetch(`${API}/api/roadmap/technologies/${rmTech}/focus`, {
+    await apiFetch(`/api/roadmap/technologies/${rmTech}/focus`, {
       method:'PATCH', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({focus}),
     });
@@ -2860,7 +2965,7 @@ async function rmRemoveFocusTag(idx){
 async function rmClearFocus(){
   rmFocusMap[rmTech] = '';
   try{
-    await fetch(`${API}/api/roadmap/technologies/${rmTech}/focus`, {
+    await apiFetch(`/api/roadmap/technologies/${rmTech}/focus`, {
       method:'PATCH', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({focus:''}),
     });
@@ -2871,8 +2976,8 @@ async function rmClearFocus(){
 async function rmLoadGraph(){
   try{
     // Fix any legacy section assignments before loading (idempotent, fast)
-    await fetch(`${API}/api/roadmap/${rmTech}/fix-sections`, {method:'POST'}).catch(()=>{});
-    const r    = await fetch(`${API}/api/roadmap/${rmTech}/graph`);
+    await apiFetch(`/api/roadmap/${rmTech}/fix-sections`, {method:'POST'}).catch(()=>{});
+    const r    = await apiFetch(`/api/roadmap/${rmTech}/graph`);
     const data = await r.json();
     rmNodes    = data.nodes    || [];
     rmLinks    = data.links    || [];
@@ -2978,7 +3083,7 @@ async function rmGenerateRoadmap(regenerate){
   try{
     // Phase 1 — core concepts (15-20 nodes)
     _setMsg('Phase 1/2: Building core concepts…');
-    const r1 = await fetch(`${API}/api/roadmap/generate/${rmTech}`, {method:'POST'});
+    const r1 = await apiFetch(`/api/roadmap/generate/${rmTech}`, {method:'POST'});
     if(!r1.ok) throw new Error(await r1.text());
     const d1 = await r1.json();
 
@@ -2986,7 +3091,7 @@ async function rmGenerateRoadmap(regenerate){
 
     // Phase 2 — advanced concepts (10-15 more nodes)
     _setMsg(`Phase 2/2: Adding advanced concepts… (${d1.nodes} so far)`);
-    const r2 = await fetch(`${API}/api/roadmap/generate/${rmTech}?expand=true`, {method:'POST'});
+    const r2 = await apiFetch(`/api/roadmap/generate/${rmTech}?expand=true`, {method:'POST'});
     if(!r2.ok) throw new Error(await r2.text());
 
     await rmLoadGraph();
@@ -3624,7 +3729,7 @@ async function _rmProcessExpandQueue(){
   _rmUpdateQueueBadge();
 
   try{
-    const r = await fetch(`${API}/api/roadmap/nodes/${item.id}/expand`, {method:'POST'});
+    const r = await apiFetch(`/api/roadmap/nodes/${item.id}/expand`, {method:'POST'});
     if(!r.ok) throw new Error(await r.text());
     await rmLoadGraph();
   }catch(e){
@@ -3693,7 +3798,7 @@ async function _rmProcessCardQueue(){
   _rmUpdateCardBadge();
 
   try{
-    const r = await fetch(`${API}/api/roadmap/nodes/${item.id}/card?force=true`);
+    const r = await apiFetch(`/api/roadmap/nodes/${item.id}/card?force=true`);
     if(!r.ok) throw new Error('Request failed');
     const reader = r.body.getReader();
     const dec    = new TextDecoder();
@@ -3818,7 +3923,7 @@ function _escHtml(s){
 
 async function rmSetStatus(nodeId, status){
   try{
-    await fetch(`${API}/api/roadmap/nodes/${nodeId}/status`,{
+    await apiFetch(`/api/roadmap/nodes/${nodeId}/status`,{
       method:'PATCH', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({status}),
     });
@@ -3838,7 +3943,7 @@ async function rmSaveNotes(){
   const node = rmNodes.find(n=>n.id===rmSel.id);
   if(node) node.personal_notes = notes;
   try{
-    await fetch(`${API}/api/roadmap/nodes/${rmSel.id}/notes`,{
+    await apiFetch(`/api/roadmap/nodes/${rmSel.id}/notes`,{
       method:'PATCH', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({notes}),
     });
@@ -3851,9 +3956,8 @@ document.addEventListener('keydown', e=>{
 });
 
 // ══════════════════════════════════════════════
-//  INIT
+//  INIT (deferred — auth runs first via DOMContentLoaded)
 // ══════════════════════════════════════════════
-loadGraph();
 window.addEventListener('resize',()=>{ initGraph(); if(selectedId)hlNode(selectedId); });
 
 /* ── RIGHT-CLICK VOCABULARY ───────────────────────────────── */
@@ -3919,7 +4023,7 @@ async function ctxAddWord(){
     document.getElementById('wpWord').textContent = finalWord;
 
     // Try to create node; 409 = already exists (that's fine)
-    const r = await fetch(`${API}/api/nodes`, {
+    const r = await apiFetch(`/api/nodes`, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({id: finalWord, cat:'concept', notes:''}),
     });
@@ -3932,7 +4036,7 @@ async function ctxAddWord(){
 
     // Stream AI card
     bodyEl.innerHTML = '<div class="wp-loading"><span class="spin"></span>Generating card…</div>';
-    const cardR = await fetch(`${API}/api/ai/stream/${encodeURIComponent(finalWord)}`);
+    const cardR = await apiFetch(`/api/ai/stream/${encodeURIComponent(finalWord)}`);
     if(!cardR.ok) throw new Error('Card stream failed');
 
     const reader = cardR.body.getReader();
@@ -4098,7 +4202,7 @@ async function vcxOpenDef(){
 
   // check server cache
   try{
-    const cr = await fetch(`${API}/api/nodes/${encodeURIComponent(word)}/cache`);
+    const cr = await apiFetch(`/api/nodes/${encodeURIComponent(word)}/cache`);
     if(cr.ok){
       const cd = await cr.json();
       if(cd && cd.cache){ aiCache[word] = cd.cache; _vcxRenderCard(cd.cache, word, cat); return; }
@@ -4110,7 +4214,7 @@ async function vcxOpenDef(){
   const stream = document.getElementById('vcxStream');
   try{
     const params = new URLSearchParams({cat, notes});
-    const r = await fetch(`${API}/api/ai/stream/${encodeURIComponent(word)}?${params}`);
+    const r = await apiFetch(`/api/ai/stream/${encodeURIComponent(word)}?${params}`);
     if(!r.ok) throw new Error('AI request failed');
     const reader = r.body.getReader();
     const dec    = new TextDecoder();
@@ -4177,7 +4281,7 @@ async function _vcxRegen(word, cat){
   let full = '';
   const stream = document.getElementById('vcxStream');
   try{
-    const r = await fetch(`${API}/api/ai/stream/${encodeURIComponent(word)}?cat=${cat}`);
+    const r = await apiFetch(`/api/ai/stream/${encodeURIComponent(word)}?cat=${cat}`);
     const reader = r.body.getReader(); const dec = new TextDecoder();
     while(true){
       const {done, value} = await reader.read(); if(done) break;
@@ -4243,7 +4347,7 @@ async function rmCtxOpenDef(){
   let full = '';
   const stream = document.getElementById('vcxStream');
   try{
-    const r = await fetch(`${API}/api/roadmap/nodes/${encodeURIComponent(d.id)}/card?force=false`);
+    const r = await apiFetch(`/api/roadmap/nodes/${encodeURIComponent(d.id)}/card?force=false`);
     if(!r.ok) throw new Error('AI request failed');
     const reader = r.body.getReader();
     const dec    = new TextDecoder();
@@ -4281,7 +4385,7 @@ async function _rmCtxForceRegen(d){
   let full = '';
   const stream = document.getElementById('vcxStream');
   try{
-    const r = await fetch(`${API}/api/roadmap/nodes/${encodeURIComponent(d.id)}/card?force=true`);
+    const r = await apiFetch(`/api/roadmap/nodes/${encodeURIComponent(d.id)}/card?force=true`);
     if(!r.ok) throw new Error('Request failed');
     const reader = r.body.getReader(); const dec = new TextDecoder();
     while(true){
@@ -4295,6 +4399,114 @@ async function _rmCtxForceRegen(d){
     body.innerHTML = `<div style="color:#f78166;font-size:13px">⚠ ${e.message}</div>`;
   }
 }
+
+// ══════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════
+function _showLogin(msg) {
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('vgUserBadge').style.display  = 'none';
+  document.getElementById('loginErr').textContent = msg || '';
+  // Focus username if empty, else password
+  const u = document.getElementById('loginUser');
+  const p = document.getElementById('loginPass');
+  (u.value ? p : u).focus();
+}
+
+function _hideLogin() {
+  document.getElementById('loginOverlay').style.display = 'none';
+}
+
+function _applyRole(role, username) {
+  const badge    = document.getElementById('vgUserBadge');
+  const nameEl   = document.getElementById('vgUserName');
+  const roleEl   = document.getElementById('vgUserRole');
+  nameEl.textContent = username || '';
+  roleEl.textContent = role || '';
+  roleEl.className   = 'vg-user-role' + (role === 'admin' ? ' admin' : '');
+  badge.style.display = 'flex';
+
+  // Hide all admin-only elements for visitor
+  if (role === 'visitor') {
+    document.body.classList.add('role-visitor');
+  } else {
+    document.body.classList.remove('role-visitor');
+  }
+}
+
+async function _doLogin() {
+  const btn  = document.getElementById('loginBtn');
+  const err  = document.getElementById('loginErr');
+  const user = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if (!user || !pass) { err.textContent = 'Enter username and password.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+  err.textContent = '';
+  try {
+    const r = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: user, password: pass }),
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.detail || 'Invalid credentials');
+    }
+    const d = await r.json();
+    localStorage.setItem('vg_token',    d.access_token);
+    localStorage.setItem('vg_role',     d.role);
+    localStorage.setItem('vg_username', d.username || user);
+    _hideLogin();
+    _applyRole(d.role, d.username || user);
+    document.getElementById('loginPass').value = '';
+    await initApp();
+  } catch (e) {
+    err.textContent = e.message || 'Sign in failed.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  }
+}
+
+function _doLogout() {
+  localStorage.removeItem('vg_token');
+  localStorage.removeItem('vg_role');
+  localStorage.removeItem('vg_username');
+  document.body.classList.remove('role-visitor');
+  _showLogin();
+}
+
+async function _authCheck() {
+  const token = _authToken();
+  if (!token) { _showLogin(); return; }
+  // Validate token still works
+  try {
+    const r = await fetch(`${API}/api/auth/me`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!r.ok) { _showLogin('Session expired — please sign in again.'); return; }
+    const d = await r.json();
+    _hideLogin();
+    _applyRole(d.role, d.username);
+    await initApp();
+  } catch (e) {
+    _showLogin();
+  }
+}
+
+// Wrap the original app initialisation so login runs first
+async function initApp() {
+  // Load graph on the vocab tab (the default startup)
+  try { await loadGraph(); } catch(e) { /* health check handles display */ }
+  try { updateHealth(); } catch(e) {}
+}
+
+// Bootstrap — run auth check instead of direct init on page load
+document.addEventListener('DOMContentLoaded', () => {
+  _authCheck();
+});
+
 </script>
 </body>
 </html>

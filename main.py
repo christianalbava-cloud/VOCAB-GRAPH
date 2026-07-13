@@ -3,15 +3,21 @@ VocabGraph — FastAPI backend
 Handles: SQLite persistence, LLM proxy (Ollama or Groq), semantic similarity, streaming
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
+from jose import JWTError, jwt
+import bcrypt as _bcrypt_lib
+from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import Optional, AsyncGenerator
 import sqlite3, json, httpx, asyncio, re, os, random
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
+
+load_dotenv()  # load .env before any os.getenv() calls
 
 # ── CONFIG ────────────────────────────────────────────────────
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")   # "ollama" | "groq"
@@ -25,6 +31,11 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL   = os.getenv("GROQ_MODEL",   "llama-3.3-70b-versatile")
 
 DB_PATH = os.getenv("DB_PATH", "vocabgraph.db")
+
+# ── AUTH CONFIG ───────────────────────────────────────────────
+JWT_SECRET   = os.getenv("JWT_SECRET", "")
+JWT_ALGO     = "HS256"
+JWT_EXPIRE_H = int(os.getenv("JWT_EXPIRE_HOURS", "8"))
 
 def _active_model() -> str:
     return GROQ_MODEL if LLM_PROVIDER == "groq" else OLLAMA_MODEL
@@ -238,6 +249,49 @@ def _seed_db(db):
     )
 
 init_db()
+# ── AUTH SETUP ────────────────────────────────────────────────
+_USERS = {
+    os.getenv("ADMIN_USERNAME",   "admin"):   {"hash": os.getenv("ADMIN_PASSWORD_HASH",   ""), "role": "admin"},
+    os.getenv("VISITOR_USERNAME", "visitor"): {"hash": os.getenv("VISITOR_PASSWORD_HASH", ""), "role": "visitor"},
+}
+_bearer = HTTPBearer()
+
+if not JWT_SECRET or not all(u["hash"] for u in _USERS.values()):
+    raise RuntimeError(
+        "\n[AUTH] Server not configured.\n"
+        "       Run:  python setup_auth.py\n"
+        "       Then restart the server.\n"
+    )
+
+def _make_token(username: str, role: str) -> str:
+    exp = datetime.utcnow() + timedelta(hours=JWT_EXPIRE_H)
+    return jwt.encode({"sub": username, "role": role, "exp": exp}, JWT_SECRET, algorithm=JWT_ALGO)
+
+def require_auth(creds: HTTPAuthorizationCredentials = Depends(_bearer)) -> dict:
+    try:
+        return jwt.decode(creds.credentials, JWT_SECRET, algorithms=[JWT_ALGO])
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+def require_admin(payload: dict = Depends(require_auth)) -> dict:
+    if payload.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return payload
+
+# ── AUTH ENDPOINTS ────────────────────────────────────────────
+@app.post("/api/auth/login")
+def auth_login(body: dict):
+    username = (body.get("username") or "").strip().lower()
+    password = body.get("password") or ""
+    user = _USERS.get(username)
+    if not user or not user["hash"] or not _bcrypt_lib.checkpw(password.encode(), user["hash"].encode()):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = _make_token(username, user["role"])
+    return {"access_token": token, "token_type": "bearer", "role": user["role"], "username": username}
+
+@app.get("/api/auth/me")
+def auth_me(payload: dict = Depends(require_auth)):
+    return {"username": payload.get("sub"), "role": payload.get("role")}
 
 # ── MODELS ───────────────────────────────────────────────────
 class NodeIn(BaseModel):
@@ -426,7 +480,7 @@ def _auto_knowledge_level(review_count: int, correct_count: int) -> str:
 
 # ── HEALTH ───────────────────────────────────────────────────
 @app.get("/api/health")
-async def health():
+async def health(_: dict = Depends(require_auth)):
     provider_ok = False
     models = []
     if LLM_PROVIDER == "groq":
@@ -451,13 +505,13 @@ async def health():
 
 # ── NODES ────────────────────────────────────────────────────
 @app.get("/api/nodes")
-def get_nodes():
+def get_nodes(_: dict = Depends(require_auth)):
     with get_db() as db:
         rows = db.execute("SELECT * FROM nodes ORDER BY created_at").fetchall()
     return rows_to_list(rows)
 
 @app.post("/api/nodes")
-def create_node(node: NodeIn):
+def create_node(node: NodeIn, _: dict = Depends(require_admin)):
     with get_db() as db:
         existing = db.execute("SELECT id FROM nodes WHERE id=?", (node.id,)).fetchone()
         if existing:
@@ -469,7 +523,7 @@ def create_node(node: NodeIn):
     return {"ok": True, "id": node.id}
 
 @app.delete("/api/nodes/{node_id}")
-def delete_node(node_id: str):
+def delete_node(node_id: str, _: dict = Depends(require_admin)):
     with get_db() as db:
         db.execute("DELETE FROM nodes WHERE id=?", (node_id,))
         db.execute("DELETE FROM links WHERE source=? OR target=?", (node_id, node_id))
@@ -477,7 +531,7 @@ def delete_node(node_id: str):
     return {"ok": True}
 
 @app.get("/api/nodes/{node_id}/cache")
-def get_cache(node_id: str):
+def get_cache(node_id: str, _: dict = Depends(require_auth)):
     with get_db() as db:
         row = db.execute("SELECT ai_cache FROM nodes WHERE id=?", (node_id,)).fetchone()
     if not row:
@@ -485,13 +539,13 @@ def get_cache(node_id: str):
     return {"word": node_id, "cache": row["ai_cache"]}
 
 @app.post("/api/nodes/{node_id}/cache")
-def set_cache(node_id: str, body: AICacheIn):
+def set_cache(node_id: str, body: AICacheIn, _: dict = Depends(require_auth)):
     with get_db() as db:
         db.execute("UPDATE nodes SET ai_cache=? WHERE id=?", (body.cache, node_id))
     return {"ok": True}
 
 @app.get("/api/nodes/{node_id}/image")
-def get_image(node_id: str):
+def get_image(node_id: str, _: dict = Depends(require_auth)):
     with get_db() as db:
         row = db.execute("SELECT image_url FROM nodes WHERE id=?", (node_id,)).fetchone()
     if not row:
@@ -499,21 +553,21 @@ def get_image(node_id: str):
     return {"word": node_id, "image_url": row["image_url"]}
 
 @app.post("/api/nodes/{node_id}/image")
-def set_image(node_id: str, body: dict):
+def set_image(node_id: str, body: dict, _: dict = Depends(require_admin)):
     url = body.get("url", "")
     with get_db() as db:
         db.execute("UPDATE nodes SET image_url=? WHERE id=?", (url, node_id))
     return {"ok": True}
 
 @app.post("/api/nodes/{node_id}/weight/increment")
-def increment_weight(node_id: str):
+def increment_weight(node_id: str, _: dict = Depends(require_auth)):
     with get_db() as db:
         db.execute("UPDATE nodes SET weight = weight + 1 WHERE id=?", (node_id,))
         row = db.execute("SELECT weight FROM nodes WHERE id=?", (node_id,)).fetchone()
     return {"ok": True, "weight": row["weight"] if row else 1}
 
 @app.post("/api/nodes/{node_id}/weight")
-def set_weight(node_id: str, body: dict):
+def set_weight(node_id: str, body: dict, _: dict = Depends(require_auth)):
     w = max(1, int(body.get("weight", 1)))
     with get_db() as db:
         db.execute("UPDATE nodes SET weight=? WHERE id=?", (w, node_id))
@@ -522,7 +576,7 @@ def set_weight(node_id: str, body: dict):
 
 # ── LINKS ────────────────────────────────────────────────────
 @app.get("/api/links")
-def get_links():
+def get_links(_: dict = Depends(require_auth)):
     with get_db() as db:
         # only return links where both endpoints exist as nodes
         rows = db.execute("""
@@ -534,7 +588,7 @@ def get_links():
     return rows_to_list(rows)
 
 @app.post("/api/links")
-def create_link(link: LinkIn):
+def create_link(link: LinkIn, _: dict = Depends(require_admin)):
     with get_db() as db:
         db.execute(
             """INSERT INTO links (source,target,score,reason,link_type)
@@ -545,7 +599,7 @@ def create_link(link: LinkIn):
     return {"ok": True}
 
 @app.post("/api/links/batch")
-def create_links_batch(links: list[LinkIn]):
+def create_links_batch(links: list[LinkIn], _: dict = Depends(require_admin)):
     with get_db() as db:
         for link in links:
             db.execute(
@@ -558,7 +612,7 @@ def create_links_batch(links: list[LinkIn]):
 
 # ── SIM CACHE ────────────────────────────────────────────────
 @app.get("/api/sim/{word}")
-def get_sim(word: str):
+def get_sim(word: str, _: dict = Depends(require_auth)):
     with get_db() as db:
         row = db.execute("SELECT results FROM sim_cache WHERE word=?", (word,)).fetchone()
     if not row:
@@ -566,7 +620,7 @@ def get_sim(word: str):
     return {"word": word, "results": json.loads(row["results"])}
 
 @app.post("/api/sim/{word}")
-def set_sim(word: str, body: dict):
+def set_sim(word: str, body: dict, _: dict = Depends(require_auth)):
     results = body.get("results", [])
     with get_db() as db:
         db.execute(
@@ -580,7 +634,7 @@ def set_sim(word: str, body: dict):
 VALID_CATS = {"concept", "phrase", "composed"}
 
 @app.patch("/api/nodes/{node_id}/category")
-def update_category(node_id: str, body: dict):
+def update_category(node_id: str, body: dict, _: dict = Depends(require_admin)):
     cat = body.get("cat", "").strip()
     if cat not in VALID_CATS:
         raise HTTPException(400, f"Invalid category. Must be one of: {', '.join(VALID_CATS)}")
@@ -589,7 +643,7 @@ def update_category(node_id: str, body: dict):
     return {"ok": True, "id": node_id, "cat": cat}
 
 @app.post("/api/ai/suggest-category")
-async def suggest_category(body: dict):
+async def suggest_category(body: dict, _: dict = Depends(require_auth)):
     word = body.get("word", "").strip()
     if not word:
         raise HTTPException(400, "word required")
@@ -608,7 +662,7 @@ Reply with ONLY the single word: concept or phrase. No explanation."""
 
 # ── EXPORT ───────────────────────────────────────────────────
 @app.get("/api/export")
-def export_graph():
+def export_graph(_: dict = Depends(require_auth)):
     with get_db() as db:
         nodes = rows_to_list(db.execute(
             "SELECT id,cat,notes,created_at,ai_cache,image_url,weight FROM nodes"
@@ -626,7 +680,7 @@ def export_graph():
 
 # ── IMPORT ───────────────────────────────────────────────────
 @app.post("/api/import")
-def import_graph(body: dict):
+def import_graph(body: dict, _: dict = Depends(require_admin)):
     """
     body: { nodes: [...], links: [...], mode: "merge"|"replace" }
     merge  = skip nodes/links that already exist (default)
@@ -700,7 +754,7 @@ def import_graph(body: dict):
 
 # ── AI: STREAM KNOWLEDGE CARD ────────────────────────────────
 @app.get("/api/ai/stream/{word}")
-async def stream_card(word: str, cat: str = "concept", notes: str = ""):
+async def stream_card(word: str, cat: str = "concept", notes: str = "", _: dict = Depends(require_auth)):
     """Stream knowledge card from Ollama"""
     cat_desc = {
         "concept":  "an abstract or technical concept in systems engineering",
@@ -747,7 +801,7 @@ Keep everything simple, clear, and useful for a systems engineer learning Englis
 
 # ── AI: SEMANTIC SIMILARITY ───────────────────────────────────
 @app.post("/api/ai/similarity")
-async def compute_similarity(body: dict):
+async def compute_similarity(body: dict, _: dict = Depends(require_auth)):
     """Ask Qwen to find semantically related nodes"""
     word     = body.get("word", "")
     cat      = body.get("cat", "concept")
@@ -796,7 +850,7 @@ Only include nodes with score >= 0.5. Maximum 4 results."""
 
 # ── AI: SPELL / GRAMMAR CHECK ────────────────────────────────
 @app.post("/api/ai/spellcheck")
-async def spellcheck(body: dict):
+async def spellcheck(body: dict, _: dict = Depends(require_auth)):
     word = body.get("word", "").strip()
     if not word:
         return {"changed": False, "correction": word}
@@ -823,7 +877,7 @@ Rules:
 
 # ── AI: VISUAL PROMPT FOR IMAGE GENERATION ───────────────────
 @app.get("/api/ai/visual-prompt/{word}")
-async def visual_prompt(word: str):
+async def visual_prompt(word: str, _: dict = Depends(require_auth)):
     """Ask Qwen to produce a short visual scene description for Pollinations.ai"""
     prompt = f'In 10 words or less, describe a simple visual scene that helps remember the concept "{word}" in systems engineering. Only output the scene description, nothing else.'
     try:
@@ -834,7 +888,7 @@ async def visual_prompt(word: str):
 
 # ── AI: PHRASE ANALYSIS ───────────────────────────────────────
 @app.post("/api/ai/phrase")
-async def analyze_phrase(body: dict):
+async def analyze_phrase(body: dict, _: dict = Depends(require_auth)):
     """Analyze a combination of words as a phrase"""
     words = body.get("words", [])
     if len(words) < 2:
@@ -858,7 +912,7 @@ Keep it short, practical, and easy to understand."""
 
 # ── AI: VERB TENSES ──────────────────────────────────────────
 @app.get("/api/ai/tenses/{word}")
-async def word_tenses(word: str):
+async def word_tenses(word: str, _: dict = Depends(require_auth)):
     prompt = f"""You are an English grammar teacher for a Spanish-speaking systems engineer.
 The word or phrase to study is: "{word}"
 
@@ -938,7 +992,7 @@ Keep it simple and practical for a non-native speaker. Fill every ___ with the r
 
 # ── AI: TRANSLATE DEFINITION TO SPANISH ──────────────────────
 @app.post("/api/ai/translate")
-async def translate_definition(body: dict):
+async def translate_definition(body: dict, _: dict = Depends(require_auth)):
     word       = body.get("word", "")
     definition = body.get("definition", "").strip()
     analogy    = body.get("analogy", "").strip()
@@ -976,7 +1030,7 @@ If there is no analogy provided, set analogy_es to "".
 # ── DETECTIVE MODE ────────────────────────────────────────────
 
 @app.get("/api/detective/challenge")
-def detective_challenge(level: int = 3):
+def detective_challenge(level: int = 3, _: dict = Depends(require_auth)):
     """Return a word challenge with clues. Level 1=easy (5 clues), 5=hard (1 clue)."""
     n_clues = max(1, min(5, 6 - level))  # level1→5 clues, level5→1 clue
 
@@ -1012,7 +1066,7 @@ def detective_challenge(level: int = 3):
 
 
 @app.post("/api/detective/result")
-def detective_result(body: dict):
+def detective_result(body: dict, _: dict = Depends(require_auth)):
     """Record a detective challenge result and update knowledge level."""
     word    = body.get("word", "").strip()
     correct = bool(body.get("correct", False))
@@ -1043,7 +1097,7 @@ def detective_result(body: dict):
 # ── REVIEW MODE ───────────────────────────────────────────────
 
 @app.get("/api/review/next")
-def review_next():
+def review_next(_: dict = Depends(require_auth)):
     """Get the next word to review with 4-option multiple choice."""
     with get_db() as db:
         # auto-mark forgotten: learned/mastered not touched in 30+ days
@@ -1121,12 +1175,12 @@ def review_next():
 
 
 @app.post("/api/review/answer")
-def review_answer(body: dict):
+def review_answer(body: dict, _: dict = Depends(require_auth)):
     return detective_result(body)
 
 
 @app.patch("/api/nodes/{node_id}/knowledge")
-def set_knowledge(node_id: str, body: dict):
+def set_knowledge(node_id: str, body: dict, _: dict = Depends(require_auth)):
     level = body.get("level", "new")
     if level not in ("new", "learned", "mastered", "forgotten"):
         raise HTTPException(400, "level must be: new, learned, mastered, or forgotten")
@@ -1136,7 +1190,7 @@ def set_knowledge(node_id: str, body: dict):
 
 
 @app.get("/api/stats/trust")
-def stats_trust():
+def stats_trust(_: dict = Depends(require_auth)):
     """Return per-word trust scores and knowledge-level distribution."""
     with get_db() as db:
         # auto-mark forgotten on stats load too
@@ -1174,14 +1228,14 @@ def stats_trust():
 # ── KNOWLEDGE ROADMAP ─────────────────────────────────────────
 
 @app.get("/api/roadmap/technologies")
-def roadmap_technologies():
+def roadmap_technologies(_: dict = Depends(require_auth)):
     with get_db() as db:
         rows = db.execute("SELECT * FROM rm_technologies ORDER BY name").fetchall()
     return {"technologies": [dict(r) for r in rows]}
 
 
 @app.post("/api/roadmap/technologies")
-def roadmap_add_technology(body: dict):
+def roadmap_add_technology(body: dict, _: dict = Depends(require_admin)):
     name = body.get("name", "").strip()
     if not name:
         raise HTTPException(400, "name required")
@@ -1199,7 +1253,7 @@ def roadmap_add_technology(body: dict):
 
 
 @app.delete("/api/roadmap/technologies/{tech_id}")
-def roadmap_delete_technology(tech_id: str):
+def roadmap_delete_technology(tech_id: str, _: dict = Depends(require_admin)):
     with get_db() as db:
         db.execute(
             """DELETE FROM rm_links
@@ -1213,7 +1267,7 @@ def roadmap_delete_technology(tech_id: str):
 
 
 @app.patch("/api/roadmap/technologies/{tech_id}/focus")
-def roadmap_set_focus(tech_id: str, body: dict):
+def roadmap_set_focus(tech_id: str, body: dict, _: dict = Depends(require_admin)):
     focus = body.get("focus", "").strip()
     with get_db() as db:
         updated = db.execute(
@@ -1287,7 +1341,7 @@ _ROADMAP_JSON_SCHEMA = """{
 
 
 @app.post("/api/roadmap/generate/{tech_id}")
-async def roadmap_generate(tech_id: str, expand: bool = False):
+async def roadmap_generate(tech_id: str, expand: bool = False, _: dict = Depends(require_admin)):
     """
     Two-phase progressive roadmap generation.
     expand=false (default): clear existing nodes and generate the first 15-20 core concepts.
@@ -1409,7 +1463,7 @@ Rules:
 
 
 @app.get("/api/roadmap/{tech_id}/graph")
-def roadmap_graph(tech_id: str):
+def roadmap_graph(tech_id: str, _: dict = Depends(require_auth)):
     with get_db() as db:
         tech = db.execute("SELECT * FROM rm_technologies WHERE id=?", (tech_id,)).fetchone()
         nodes = db.execute(
@@ -1431,7 +1485,7 @@ def roadmap_graph(tech_id: str):
 
 
 @app.post("/api/roadmap/nodes/{node_id}/expand")
-async def roadmap_expand_node(node_id: str):
+async def roadmap_expand_node(node_id: str, _: dict = Depends(require_admin)):
     """Generate 4-7 deeper sub-topics for a node and wire them into the graph."""
     with get_db() as db:
         node = db.execute("SELECT * FROM rm_nodes WHERE id=?", (node_id,)).fetchone()
@@ -1531,7 +1585,7 @@ Rules:
 
 
 @app.post("/api/roadmap/{tech_id}/fix-sections")
-def roadmap_fix_sections(tech_id: str):
+def roadmap_fix_sections(tech_id: str, _: dict = Depends(require_admin)):
     """
     Retroactively fix section assignments: any node whose direct children share
     its own section gets those children moved into a section named after the node.
@@ -1589,7 +1643,7 @@ def roadmap_fix_sections(tech_id: str):
 
 
 @app.patch("/api/roadmap/nodes/{node_id}/status")
-def roadmap_set_status(node_id: str, body: dict):
+def roadmap_set_status(node_id: str, body: dict, _: dict = Depends(require_auth)):
     status = body.get("status", "not_started")
     if status not in {"not_started", "studying", "understood", "practiced", "mastered"}:
         raise HTTPException(400, "Invalid status")
@@ -1599,7 +1653,7 @@ def roadmap_set_status(node_id: str, body: dict):
 
 
 @app.patch("/api/roadmap/nodes/{node_id}/notes")
-def roadmap_save_notes(node_id: str, body: dict):
+def roadmap_save_notes(node_id: str, body: dict, _: dict = Depends(require_auth)):
     notes = body.get("notes", "")
     with get_db() as db:
         db.execute("UPDATE rm_nodes SET personal_notes=? WHERE id=?", (notes, node_id))
@@ -1607,7 +1661,7 @@ def roadmap_save_notes(node_id: str, body: dict):
 
 
 @app.get("/api/roadmap/nodes/{node_id}/card")
-async def roadmap_node_card(node_id: str, force: bool = False):
+async def roadmap_node_card(node_id: str, force: bool = False, _: dict = Depends(require_auth)):
     """Stream an AI-generated learning card for a roadmap concept."""
     with get_db() as db:
         node = db.execute("SELECT * FROM rm_nodes WHERE id=?", (node_id,)).fetchone()
