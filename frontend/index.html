@@ -717,6 +717,14 @@ svg#graph{width:100%;height:100%;}
   </div>
 </div>
 
+<!-- ROADMAP NODE CONTEXT MENU -->
+<div class="vcx-menu" id="rmCtxMenu">
+  <div class="vcx-item" onclick="rmCtxOpenDef()">
+    <span class="vcx-item-icon">✦</span>
+    <span class="vcx-item-label">Search Definition</span>
+  </div>
+</div>
+
 <!-- NODE CONTEXT MENU -->
 <div class="vcx-menu" id="vcxMenu">
   <div class="vcx-item" id="vcxItemDef" onclick="vcxOpenDef()">
@@ -3046,6 +3054,7 @@ function _rmRenderGraph(){
   const node = g.selectAll('.rm-node').data(simNodes).enter().append('g')
     .attr('class','rm-node').style('cursor','pointer')
     .on('click',(evt,d)=>rmSelectNode(d))
+    .on('contextmenu',(evt,d)=>{ evt.preventDefault(); evt.stopPropagation(); _rmCtxShow(evt,d); })
     .call(d3.drag()
       .on('start',(evt,d)=>{ if(!evt.active) rmSimInst.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
       .on('drag', (evt,d)=>{ d.fx=evt.x; d.fy=evt.y; })
@@ -3311,6 +3320,7 @@ function _rmRenderPath(){
       _rmPathNodes.forEach(refs => refs.g.removeAttribute('opacity'));
     });
     g.addEventListener('click', () => rmSelectNode(n));
+    g.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); _rmCtxShow(e, n); });
     nodesG.appendChild(g);
   });
 
@@ -3335,21 +3345,14 @@ function _rmRenderPath(){
   }
 }
 
-// BFS both directions: ancestors (prerequisites) + descendants (what this unlocks)
+// Direct neighbors only: the selected node + every node connected by exactly one link
 function _rmGetFullPath(startId){
-  const bwd = {}, fwd = {};
+  const neighbors = new Set([startId]);
   rmLinks.forEach(l => {
-    (bwd[l.target] = bwd[l.target]||[]).push(l.source);
-    (fwd[l.source] = fwd[l.source]||[]).push(l.target);
+    if(l.source === startId) neighbors.add(l.target);
+    if(l.target === startId) neighbors.add(l.source);
   });
-  const visited = new Set([startId]);
-  const queue   = [startId];
-  while(queue.length){
-    const cur = queue.shift();
-    (bwd[cur]||[]).forEach(id => { if(!visited.has(id)){ visited.add(id); queue.push(id); } });
-    (fwd[cur]||[]).forEach(id => { if(!visited.has(id)){ visited.add(id); queue.push(id); } });
-  }
-  return visited;
+  return neighbors;
 }
 
 function _rmHighlightPath(nodeId){
@@ -4049,8 +4052,8 @@ function _vcxHideMenu(){
   document.getElementById('vcxMenu').classList.remove('open');
 }
 
-document.addEventListener('click',  _vcxHideMenu);
-document.addEventListener('keydown', e => { if(e.key==='Escape'){ _vcxHideMenu(); vcxClose(); } });
+document.addEventListener('click',  () => { _vcxHideMenu(); _rmCtxHideMenu(); });
+document.addEventListener('keydown', e => { if(e.key==='Escape'){ _vcxHideMenu(); _rmCtxHideMenu(); vcxClose(); } });
 
 function vcxOpenNode(){
   if(!_vcxNode) return;
@@ -4062,6 +4065,7 @@ function vcxOpenNode(){
 function vcxClose(){
   document.getElementById('vcxOverlay').classList.remove('open');
   _vcxNode = null;
+  _rmCtxNode = null;
 }
 
 const _catStyleVcx = {
@@ -4183,6 +4187,110 @@ async function _vcxRegen(word, cat){
     aiCache[word] = full;
     apiPost(`/api/nodes/${encodeURIComponent(word)}/cache`, {word, cache: full});
     _vcxRenderCard(full, word, cat);
+  }catch(e){
+    body.innerHTML = `<div style="color:#f78166;font-size:13px">⚠ ${e.message}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════════
+// ROADMAP NODE RIGHT-CLICK — "Search Definition"
+// ══════════════════════════════════════════════
+let _rmCtxNode = null;
+
+function _rmCtxShow(event, d){
+  _rmCtxNode = d;
+  _vcxHideMenu(); // close vocab menu if open
+  const menu = document.getElementById('rmCtxMenu');
+  menu.classList.add('open');
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const mw = 200, mh = 44;
+  const x = event.clientX, y = event.clientY;
+  menu.style.left = Math.min(x, vw - mw - 4) + 'px';
+  menu.style.top  = Math.min(y, vh - mh - 4) + 'px';
+}
+
+function _rmCtxHideMenu(){
+  document.getElementById('rmCtxMenu').classList.remove('open');
+}
+
+async function rmCtxOpenDef(){
+  _rmCtxHideMenu();
+  if(!_rmCtxNode) return;
+  const d    = _rmCtxNode;
+  const name = d.name || d.id;
+  const cat  = d.category || 'concept';
+  const catColor = (typeof RM_CAT_COLOR !== 'undefined' && RM_CAT_COLOR[cat]) || '#58a6ff';
+
+  // Fill popup header
+  document.getElementById('vcxPopWord').textContent = name;
+  const catEl = document.getElementById('vcxPopCat');
+  catEl.textContent = cat;
+  catEl.style.color  = catColor;
+  catEl.style.border = `1px solid ${catColor}66`;
+
+  // Show overlay with loading state
+  const body = document.getElementById('vcxPopBody');
+  body.innerHTML = '<div class="vcx-streaming" id="vcxStream">⟳ Asking AI…</div>';
+  document.getElementById('vcxOverlay').classList.add('open');
+
+  // Use cached content if already generated
+  if(d.ai_cache){
+    _rmCtxRenderPopup(d.ai_cache, d);
+    return;
+  }
+
+  // Stream from roadmap card endpoint
+  let full = '';
+  const stream = document.getElementById('vcxStream');
+  try{
+    const r = await fetch(`${API}/api/roadmap/nodes/${encodeURIComponent(d.id)}/card?force=false`);
+    if(!r.ok) throw new Error('AI request failed');
+    const reader = r.body.getReader();
+    const dec    = new TextDecoder();
+    while(true){
+      const {done, value} = await reader.read();
+      if(done) break;
+      full += dec.decode(value, {stream:true});
+      if(stream) stream.textContent = full;
+    }
+    d.ai_cache = full;
+    _rmCtxRenderPopup(full, d);
+  }catch(e){
+    body.innerHTML = `<div style="color:#f78166;font-size:13px;padding:10px 0">⚠ ${e.message}</div>`;
+  }
+}
+
+function _rmCtxRenderPopup(text, d){
+  const body = document.getElementById('vcxPopBody');
+  const wrap = document.createElement('div');
+  _rmRenderCard(text, wrap);
+  const regenBtn = document.createElement('button');
+  regenBtn.className = 'vcx-regen-btn';
+  regenBtn.textContent = '↺ Regenerate';
+  regenBtn.onclick = () => _rmCtxForceRegen(d);
+  wrap.appendChild(regenBtn);
+  body.innerHTML = '';
+  body.appendChild(wrap);
+}
+
+async function _rmCtxForceRegen(d){
+  if(!d) return;
+  d.ai_cache = '';
+  const body = document.getElementById('vcxPopBody');
+  body.innerHTML = '<div class="vcx-streaming" id="vcxStream">⟳ Regenerating…</div>';
+  let full = '';
+  const stream = document.getElementById('vcxStream');
+  try{
+    const r = await fetch(`${API}/api/roadmap/nodes/${encodeURIComponent(d.id)}/card?force=true`);
+    if(!r.ok) throw new Error('Request failed');
+    const reader = r.body.getReader(); const dec = new TextDecoder();
+    while(true){
+      const {done, value} = await reader.read(); if(done) break;
+      full += dec.decode(value, {stream:true});
+      if(stream) stream.textContent = full;
+    }
+    d.ai_cache = full;
+    _rmCtxRenderPopup(full, d);
   }catch(e){
     body.innerHTML = `<div style="color:#f78166;font-size:13px">⚠ ${e.message}</div>`;
   }

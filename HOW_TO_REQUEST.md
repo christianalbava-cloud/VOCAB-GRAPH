@@ -1,6 +1,7 @@
 # How to Send Requests to AI — VocabGraph Guide
 
 This file has two purposes:
+
 1. A complete log of every change made to this project
 2. A personal guide showing you **how to write better requests** so the AI understands faster and produces correct results on the first try
 
@@ -15,6 +16,7 @@ CONTEXT:   In [feature/file], currently [what exists or what is broken].
 ACTION:    [Add / Fix / Remove / Change / Move] [specific thing].
 BEHAVIOR:  When [trigger], it should [expected result].
 CONSTRAINT: Make sure [restriction or edge case to respect].
+Add this change to the HOW_TO_REQUEST file and update the description to maintain the same structure across all requests.
 ```
 
 You do not need to use these exact words — but always include these four pieces of information. The more you give, the less the AI has to guess.
@@ -24,16 +26,20 @@ You do not need to use these exact words — but always include these four piece
 ## The 5 Rules for Good Requests
 
 ### Rule 1 — Name the feature and the file
-Bad:  `"the graph is not working"`
+
+Bad: `"the graph is not working"`
 Good: `"In the roadmap path view (frontend/index.html), when I select a node the graph resets zoom"`
 
 ### Rule 2 — Describe current behavior AND expected behavior
-Bad:  `"fix the highlight"`
+
+Bad: `"fix the highlight"`
 Good: `"Currently selecting a node only highlights ancestors. I also want descendants (nodes that come after) to be highlighted"`
 
 ### Rule 3 — One topic per request (or number them clearly)
-Bad:  `"fix the bug and also add a button and the panel is too small"`
+
+Bad: `"fix the bug and also add a button and the panel is too small"`
 Good:
+
 ```
 I have 3 separate requests:
 1. Fix: [specific bug]
@@ -42,19 +48,33 @@ I have 3 separate requests:
 ```
 
 ### Rule 4 — Say what you do NOT want
-Bad:  `"make it highlight the path"`
+
+Bad: `"make it highlight the path"`
 Good: `"Highlight the path from root to the selected node — do NOT highlight all connected nodes, only the direct ancestor chain"`
 
 ### Rule 5 — Include the trigger, not just the goal
-Bad:  `"add a queue"`
+
+Bad: `"add a queue"`
 Good: `"When I click Expand on multiple nodes, instead of waiting for each one, add them to a queue and process them one at a time"`
 
 ---
 
 ## All Project Requests — Written in Human Language
 
-These are the 22 changes made to this project, from most recent to oldest.
+These are the 24 changes made to this project, from most recent to oldest.
 Each one shows how you could have written that request — natural, clear, enough detail for the AI to act without guessing.
+
+---
+
+### 24. Feature — Right-click on a roadmap node to search its definition
+
+> In the roadmap graph, when I right-click on any tech concept node I want a small menu to appear with a "Search Definition" option. Clicking it should open the same popup style that the vocabulary graph uses — with an AI-generated explanation, examples, how to use it, and ideas to remember it. Also allow regenerating the content from inside that popup.
+
+---
+
+### 23. Fix — Selecting a node highlights all nodes instead of just the connected ones
+
+> In the roadmap path view, when I click a node it highlights every single node and line in the graph — the whole thing lights up. I only want to see the selected node and the ones directly connected to it by a line. Everything else should go dim. Do not highlight the entire path back to the root, just the immediate neighbors one step away.
 
 ---
 
@@ -166,6 +186,7 @@ Each one shows how you could have written that request — natural, clear, enoug
 ### 6. Feature — Add and delete topics, handle more than 5
 
 > The roadmap currently only has Ruby on Rails and C# hardcoded. I want to:
+>
 > - Add new topics from the UI, like typing "TypeScript" and it creates one
 > - Delete topics I don't want anymore
 > - If I have more than 5 topics, don't show them all as tabs — show 5 and a "+N" button that opens a list of the rest
@@ -188,6 +209,7 @@ Each one shows how you could have written that request — natural, clear, enoug
 ### 3. Feature — Queue for AI Card, also allow regenerating
 
 > The AI Card button in the roadmap only lets me load it once. I want two things:
+>
 > - Be able to regenerate the card for a node I already loaded, to get fresh information
 > - Same queue behavior as Expand — I can click AI Card on several nodes and they process one by one in the background. If I'm looking at the node that's currently being generated, I see it streaming live. If it's a different node, it just updates quietly in the background.
 
