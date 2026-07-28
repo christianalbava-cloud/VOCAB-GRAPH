@@ -672,9 +672,19 @@ svg#graph{width:100%;height:100%;}
 /* Hide admin-only elements for visitor role */
 body.role-visitor .admin-only{ display:none !important; }
 
+/* TOAST */
+#vgToast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(12px);
+  background:#1c2128;border:1px solid #30363d;color:#e6edf3;border-radius:8px;
+  padding:10px 20px;font-size:13px;opacity:0;pointer-events:none;
+  transition:opacity .2s,transform .2s;z-index:9999;white-space:nowrap;}
+#vgToast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#vgToast.toast-ok{border-color:var(--accent);color:var(--accent);}
+#vgToast.toast-err{border-color:var(--orange);color:var(--orange);}
+
 </style>
 </head>
 <body>
+<div id="vgToast"></div>
 <!-- ── LOGIN OVERLAY ───────────────────────────────────────── -->
 <div id="loginOverlay">
   <div class="login-card">
@@ -724,6 +734,7 @@ body.role-visitor .admin-only{ display:none !important; }
   <button class="hbtn" onclick="openDetective()">🔍 Detective</button>
   <button class="hbtn" onclick="exportGraph()">⬇ Export</button>
   <button class="hbtn admin-only" onclick="openImportModal()">⬆ Import</button>
+  <button class="hbtn admin-only" onclick="removeOrphanNodes()" title="Delete nodes with no links">🧹 Orphans</button>
   <button class="hbtn primary admin-only" onclick="openModal()">+ Add Word</button>
   <div id="vgUserBadge" class="vg-user-badge" style="display:none;margin-left:auto">
     <span id="vgUserName"></span>
@@ -2228,6 +2239,30 @@ function buildStatsCard(){
 }
 
 // ══════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════
+let _toastTimer = null;
+function showToast(msg, type='ok', ms=3000){
+  const el = document.getElementById('vgToast');
+  el.textContent = msg;
+  el.className = `show toast-${type}`;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(()=>{ el.className = ''; }, ms);
+}
+
+//  ORPHAN CLEANUP
+// ══════════════════════════════════════════════
+async function removeOrphanNodes(){
+  if(!confirm('Delete all nodes with no links? This cannot be undone.')) return;
+  try{
+    const r = await apiFetch('/api/nodes/orphans', {method:'DELETE'}).then(r=>r.json());
+    if(r.deleted === 0){ showToast('No orphan nodes found.', 'ok'); return; }
+    r.nodes.forEach(id => { nodes = nodes.filter(n=>n.id!==id); links = links.filter(l=>l.source!==id&&l.target!==id); });
+    renderGraph();
+    showToast(`✓ Removed ${r.deleted} orphan node(s).`, 'ok');
+  } catch(e){ showToast('Error removing orphans.', 'err'); }
+}
+
 //  EXPORT
 // ══════════════════════════════════════════════
 async function exportGraph(){

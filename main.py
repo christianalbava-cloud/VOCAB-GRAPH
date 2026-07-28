@@ -522,6 +522,19 @@ def create_node(node: NodeIn, _: dict = Depends(require_admin)):
         )
     return {"ok": True, "id": node.id}
 
+@app.delete("/api/nodes/orphans")
+def delete_orphan_nodes(_: dict = Depends(require_admin)):
+    with get_db() as db:
+        orphans = [r[0] for r in db.execute("""
+            SELECT id FROM nodes
+            WHERE id NOT IN (SELECT source FROM links)
+              AND id NOT IN (SELECT target FROM links)
+        """).fetchall()]
+        for nid in orphans:
+            db.execute("DELETE FROM nodes WHERE id=?", (nid,))
+            db.execute("DELETE FROM sim_cache WHERE word=?", (nid,))
+    return {"ok": True, "deleted": len(orphans), "nodes": orphans}
+
 @app.delete("/api/nodes/{node_id}")
 def delete_node(node_id: str, _: dict = Depends(require_admin)):
     with get_db() as db:
